@@ -355,7 +355,7 @@
         
         /* Map Container */
         .map-container {
-            height: 250px;
+            height: 270px; /* Increased by 20px */
             background-color: #eee;
             border-radius: 12px;
             margin-bottom: 20px;
@@ -586,6 +586,21 @@
         }
         
         .status-pending {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #2196F3;
+        }
+        
+        .status-resolved {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+        
+        .status-outstanding {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: var(--warning);
+        }
+        
+        .status-progress {
             background-color: rgba(33, 150, 243, 0.2);
             color: #2196F3;
         }
@@ -870,6 +885,79 @@
             border-bottom: none;
             padding: 8px 0;
         }
+        
+        /* Login/Logout Button */
+        .login-logout-btn {
+            background-color: var(--light-blue);
+            color: var(--dark-blue);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+        
+        /* Dispute Status Selector */
+        .status-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .status-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .status-progress-btn {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #2196F3;
+        }
+        
+        .status-resolved-btn {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+        
+        .status-outstanding-btn {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: var(--warning);
+        }
+        
+        /* Edit Form */
+        .edit-form {
+            margin-bottom: 20px;
+        }
+        
+        /* Profile Details */
+        .profile-details {
+            margin-bottom: 20px;
+        }
+        
+        .profile-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray);
+        }
+        
+        .profile-item:last-child {
+            border-bottom: none;
+        }
+        
+        .profile-label {
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        
+        .profile-value {
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -883,6 +971,7 @@
             <div class="header-icons">
                 <i class="fas fa-bell"></i>
                 <i class="fas fa-user"></i>
+                <button class="login-logout-btn" id="login-logout-btn">Login</button>
             </div>
         </header>
         
@@ -891,7 +980,7 @@
             <div class="tab active" data-app="passenger">Passenger</div>
             <div class="tab" data-app="driver">Driver</div>
             <div class="tab" data-app="owner">Owner</div>
-            <div class="tab" data-app="association">Association</div>
+            <div class="tab" data-app="association">Taxi Association</div>
         </div>
         
         <!-- Passenger App Content -->
@@ -943,7 +1032,7 @@
                         </div>
                         <div class="item-details">
                             <h4>Soweto to Johannesburg</h4>
-                            <p>Today, 08:15 AM</p>
+                            <p>Toyota HiACE (ABC 123 EC) | Today, 08:15 AM</p>
                         </div>
                     </div>
                     <div class="item-value">R 35.00</div>
@@ -956,7 +1045,7 @@
                         </div>
                         <div class="item-details">
                             <h4>Alexandra to Sandton</h4>
-                            <p>Yesterday, 05:30 PM</p>
+                            <p>Volkswagen Kombi (DEF 456 GP) | Yesterday, 05:30 PM</p>
                         </div>
                     </div>
                     <div class="item-value">R 42.50</div>
@@ -969,7 +1058,7 @@
                         </div>
                         <div class="item-details">
                             <h4>Pretoria to Midrand</h4>
-                            <p>12 Oct, 07:45 AM</p>
+                            <p>Toyota HiACE (GHI 789 EC) | 12 Oct, 07:45 AM</p>
                         </div>
                     </div>
                     <div class="item-value">R 60.00</div>
@@ -977,7 +1066,7 @@
             </div>
             
             <!-- Panic Button -->
-            <div class="panic-button">
+            <div class="panic-button" id="passenger-panic-btn">
                 <i class="fas fa-exclamation"></i>
             </div>
         </div>
@@ -1024,6 +1113,10 @@
                 <button class="btn btn-secondary" id="change-route-btn">
                     <i class="fas fa-sync"></i> Change Route
                 </button>
+                
+                <button class="btn btn-secondary" id="change-vehicle-btn">
+                    <i class="fas fa-car"></i> Change Vehicle
+                </button>
             </div>
             
             <!-- Vehicle Information -->
@@ -1046,8 +1139,9 @@
                 
                 <div class="card">
                     <label class="form-label">QR Code for Passengers</label>
-                        <img src="qr-code.png" alt="QR Code for Tracking" style="width: 300px; height: 300px;">
+                        <img src="qr-code.png" alt="QR Code for Tracking" style="width: 300px; height: 400px;">
                 </div>
+            </div>
             </div>
             
             <!-- Payment Confirmations -->
@@ -1060,7 +1154,7 @@
                         </div>
                         <div class="item-details">
                             <h4>Thabo M.</h4>
-                            <p>10:25 AM - Cash</p>
+                            <p>Soweto to Johannesburg | 10:25 AM - Cash</p>
                         </div>
                     </div>
                     <div class="item-value">R 35.00</div>
@@ -1073,10 +1167,10 @@
                         </div>
                         <div class="item-details">
                             <h4>Lerato K.</h4>
-                            <p>10:18 AM - Digital</p>
+                            <p>Alexandra to Sandton | 10:18 AM - Digital</p>
                         </div>
                     </div>
-                    <div class="item-value">R 35.00</div>
+                    <div class="item-value">R 42.50</div>
                 </div>
                 
                 <div class="list-item">
@@ -1086,11 +1180,16 @@
                         </div>
                         <div class="item-details">
                             <h4>James T.</h4>
-                            <p>10:05 AM - Digital</p>
+                            <p>Pretoria to Midrand | 10:05 AM - Digital</p>
                         </div>
                     </div>
-                    <div class="item-value">R 35.00</div>
+                    <div class="item-value">R 60.00</div>
                 </div>
+            </div>
+            
+            <!-- Panic Button -->
+            <div class="panic-button" id="driver-panic-btn">
+                <i class="fas fa-exclamation"></i>
             </div>
         </div>
         
@@ -1231,7 +1330,7 @@
                     <div class="item-value">R 8,350.00</div>
                 </div>
                 
-                <button class="btn btn-success">
+                <button class="btn btn-success" id="withdraw-funds-btn">
                     <i class="fas fa-download"></i> Withdraw Funds
                 </button>
             </div>
@@ -1329,8 +1428,17 @@
             <div class="section-title">Member Registration <span class="view-all">View All</span></div>
             <div class="card">
                 <div class="form-group">
-                    <label class="form-label">Bulk Upload Members</label>
-                    <input type="file" class="form-input">
+                    <label class="form-label">Member Name</label>
+                    <input type="text" class="form-input" placeholder="Enter member name">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Member Type</label>
+                    <select class="form-input">
+                        <option value="">Select member type</option>
+                        <option value="driver">Driver</option>
+                        <option value="owner">Owner</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -1358,7 +1466,7 @@
                 </div>
                 
                 <button class="btn btn-primary" id="start-verification-btn">
-                    <i class="fas fa-user-check"></i> Start Verification
+                    <i class="fas fa-user-check"></i> Verify Member
                 </button>
             </div>
             
@@ -1371,12 +1479,12 @@
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <div class="item-details">
-                            <h4>Overcharging Complaint</h4>
-                            <p>Vehicle: ABC 123 EC | Driver: Siyabonga M.</p>
+                            <h4>Route Deviation</h4>
+                            <p>Vehicle: DEF 456 EC | Driver: Lungelo N. | Today, 09:45 AM</p>
                         </div>
                     </div>
                     <div class="item-value">
-                        <span class="status-indicator status-pending">Review</span>
+                        <span class="status-indicator status-progress">In Progress</span>
                     </div>
                 </div>
                 
@@ -1386,18 +1494,20 @@
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <div class="item-details">
-                            <h4>Route Deviation</h4>
-                            <p>Vehicle: DEF 456 EC | Driver: Lungelo N.</p>
+                            <h4>Overcharging Complaint</h4>
+                            <p>Vehicle: ABC 123 EC | Driver: Siyabonga M. | Yesterday, 05:30 PM</p>
                         </div>
                     </div>
                     <div class="item-value">
-                        <span class="status-indicator status-pending">Review</span>
+                        <span class="status-indicator status-outstanding">Outstanding</span>
                     </div>
                 </div>
                 
-                <button class="btn btn-primary" id="resolve-disputes-btn">
-                    <i class="fas fa-gavel"></i> Resolve Disputes
-                </button>
+                <div class="status-selector">
+                    <button class="status-btn status-progress-btn">In Progress</button>
+                    <button class="status-btn status-resolved-btn">Resolved</button>
+                    <button class="status-btn status-outstanding-btn">Outstanding</button>
+                </div>
             </div>
         </div>
         
@@ -1621,8 +1731,26 @@
                         <label class="form-label">Upload Photo (Optional)</label>
                         <input type="file" class="form-input">
                     </div>
-                    <button class="btn btn-primary">Send to Taxi Association</button>
+                    <button class="btn btn-primary" id="send-support-btn">Send to Taxi Association</button>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Support Confirmation Modal -->
+        <div class="modal" id="support-confirmation-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Message Sent</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <div class="success-checkmark">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Thank You!</h3>
+                    <p>Your message has been sent to the Taxi Association. We'll get back to you soon.</p>
+                </div>
+                <button class="btn btn-primary" id="support-ok-btn">OK</button>
             </div>
         </div>
         
@@ -1644,6 +1772,379 @@
                 <button class="btn btn-primary" id="confirm-route-change">Change Route</button>
             </div>
         </div>
+        
+        <!-- Change Vehicle Modal -->
+        <div class="modal" id="change-vehicle-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Select Vehicle</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Available Vehicles</label>
+                    <select class="form-input" id="vehicle-select">
+                        <option value="vehicle1">Toyota HiACE (ABC 123 EC)</option>
+                        <option value="vehicle2">Volkswagen Kombi (DEF 456 GP)</option>
+                        <option value="vehicle3">Toyota HiACE (GHI 789 EC)</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="confirm-vehicle-change">Change Vehicle</button>
+            </div>
+        </div>
+        
+        <!-- Panic Confirmation Modal -->
+        <div class="modal" id="panic-confirmation-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Emergency Alert</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="support-form">
+                    <p>Are you sure you want to trigger the emergency alert? This will notify authorities and your emergency contacts.</p>
+                    <div class="add-remove-buttons">
+                        <button class="add-btn" id="confirm-panic-btn">Yes, Alert Authorities</button>
+                        <button class="remove-btn" id="cancel-panic-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panic Success Modal -->
+        <div class="modal" id="panic-success-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Alert Sent</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <div class="success-checkmark">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Emergency Alert Activated!</h3>
+                    <p>Authorities and your emergency contacts have been notified. Your location is being shared.</p>
+                </div>
+                <button class="btn btn-primary" id="panic-ok-btn">OK</button>
+            </div>
+        </div>
+        
+        <!-- History Modal -->
+        <div class="modal" id="history-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Ride History</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="card">
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon">
+                                <i class="fas fa-taxi"></i>
+                            </div>
+                            <div class="item-details">
+                                <h4>Soweto to Johannesburg</h4>
+                                <p>Toyota HiACE (ABC 123 EC) | Today, 08:15 AM</p>
+                            </div>
+                        </div>
+                        <div class="item-value">R 35.00</div>
+                    </div>
+                    
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon">
+                                <i class="fas fa-taxi"></i>
+                            </div>
+                            <div class="item-details">
+                                <h4>Alexandra to Sandton</h4>
+                                <p>Volkswagen Kombi (DEF 456 GP) | Yesterday, 05:30 PM</p>
+                            </div>
+                        </div>
+                        <div class="item-value">R 42.50</div>
+                    </div>
+                    
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon">
+                                <i class="fas fa-taxi"></i>
+                            </div>
+                            <div class="item-details">
+                                <h4>Pretoria to Midrand</h4>
+                                <p>Toyota HiACE (GHI 789 EC) | 12 Oct, 07:45 AM</p>
+                            </div>
+                        </div>
+                        <div class="item-value">R 60.00</div>
+                    </div>
+                    
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon">
+                                <i class="fas fa-taxi"></i>
+                            </div>
+                            <div class="item-details">
+                                <h4>Johannesburg to Soweto</h4>
+                                <p>Toyota HiACE (ABC 123 EC) | 11 Oct, 06:30 PM</p>
+                            </div>
+                        </div>
+                        <div class="item-value">R 35.00</div>
+                    </div>
+                    
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon">
+                                <i class="fas fa-taxi"></i>
+                            </div>
+                            <div class="item-details">
+                                <h4>Sandton to Alexandra</h4>
+                                <p>Volkswagen Kombi (DEF 456 GP) | 10 Oct, 04:15 PM</p>
+                            </div>
+                        </div>
+                        <div class="item-value">R 42.50</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Wallet Modal -->
+        <div class="modal" id="wallet-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title" id="wallet-modal-title">Wallet</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="wallet-balance">
+                    <div class="balance-label" id="wallet-modal-label">Your Wallet Balance</div>
+                    <div class="balance-amount" id="wallet-modal-amount">R 245.50</div>
+                </div>
+                <button class="btn btn-primary" id="wallet-close-btn">Close</button>
+            </div>
+        </div>
+        
+        <!-- Profile Modal -->
+        <div class="modal" id="profile-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Profile Details</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="profile-details">
+                    <div class="profile-item">
+                        <span class="profile-label">Full Name:</span>
+                        <span class="profile-value">Thabo Mbeki</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Email:</span>
+                        <span class="profile-value">thabo.mbeki@example.com</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Phone:</span>
+                        <span class="profile-value">+27 12 345 6789</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Member Since:</span>
+                        <span class="profile-value">15 Jan 2023</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Total Rides:</span>
+                        <span class="profile-value">42</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="profile-close-btn">Close</button>
+            </div>
+        </div>
+        
+        <!-- Edit Vehicle Modal -->
+        <div class="modal" id="edit-vehicle-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Edit Vehicle</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Vehicle Model</label>
+                        <input type="text" class="form-input" value="Toyota HiACE">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Registration Number</label>
+                        <input type="text" class="form-input" value="ABC 123 EC">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-input">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="save-vehicle-btn">Save Changes</button>
+            </div>
+        </div>
+        
+        <!-- Edit Driver Modal -->
+        <div class="modal" id="edit-driver-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Edit Driver</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Driver Name</label>
+                        <input type="text" class="form-input" value="Siyabonga M.">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assigned Vehicle</label>
+                        <select class="form-input">
+                            <option value="vehicle1">Toyota HiACE (ABC 123 EC)</option>
+                            <option value="vehicle2">Volkswagen Kombi (DEF 456 GP)</option>
+                            <option value="vehicle3">Toyota HiACE (GHI 789 EC)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-input">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="save-driver-btn">Save Changes</button>
+            </div>
+        </div>
+        
+        <!-- Withdraw Funds Modal -->
+        <div class="modal" id="withdraw-funds-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Withdraw Funds</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Amount</label>
+                        <input type="number" class="form-input" placeholder="Enter amount to withdraw">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bank Account/E-Wallet</label>
+                        <select class="form-input">
+                            <option value="">Select account</option>
+                            <option value="bank1">Standard Bank - **** 1234</option>
+                            <option value="bank2">FNB - **** 5678</option>
+                            <option value="ewallet">MTN Mobile Money</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="confirm-withdraw-btn">Withdraw Funds</button>
+            </div>
+        </div>
+        
+        <!-- Withdraw Success Modal -->
+        <div class="modal" id="withdraw-success-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Withdrawal Successful</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <div class="success-checkmark">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Funds Withdrawn!</h3>
+                    <p>Your withdrawal of R <span id="withdraw-amount">0.00</span> has been processed successfully.</p>
+                </div>
+                <button class="btn btn-primary" id="withdraw-ok-btn">OK</button>
+            </div>
+        </div>
+        
+        <!-- Edit Route Modal -->
+        <div class="modal" id="edit-route-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Edit Route</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Route Name</label>
+                        <input type="text" class="form-input" value="Soweto-Johannesburg CBD">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fare Rate (R)</label>
+                        <input type="number" class="form-input" value="35.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-input">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="save-route-btn">Save Changes</button>
+            </div>
+        </div>
+        
+        <!-- Edit Member Modal -->
+        <div class="modal" id="edit-member-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Edit Member</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Member Name</label>
+                        <input type="text" class="form-input" value="Siyabonga M.">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Member Type</label>
+                        <select class="form-input">
+                            <option value="driver">Driver</option>
+                            <option value="owner">Owner</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Verification Status</label>
+                        <select class="form-input">
+                            <option value="verified">Verified</option>
+                            <option value="pending">Pending</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="save-member-btn">Save Changes</button>
+            </div>
+        </div>
+        
+        <!-- Login Modal -->
+        <div class="modal" id="login-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Login</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" placeholder="Enter your password">
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="confirm-login-btn">Login</button>
+                <div class="divider">
+                    <span>Or login with</span>
+                </div>
+                <button class="btn btn-google">
+                    <i class="fab fa-google"></i> Google
+                </button>
+                <button class="btn btn-facebook">
+                    <i class="fab fa-facebook"></i> Facebook
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -1654,6 +2155,7 @@
         let currentFare = 35.00;
         let selectedPaymentMethod = "";
         let passengerMap, routeMap;
+        let isLoggedIn = false;
         
         // Initialize maps
         function initMaps() {
@@ -1702,8 +2204,37 @@
                 // Show the selected app content
                 const appId = `${tab.dataset.app}-app`;
                 document.getElementById(appId).classList.add('active');
+                
+                // Update wallet modal title based on active app
+                updateWalletModal();
             });
         });
+        
+        // Update wallet modal based on active app
+        function updateWalletModal() {
+            const activeTab = document.querySelector('.tab.active').dataset.app;
+            const modalTitle = document.getElementById('wallet-modal-title');
+            const modalLabel = document.getElementById('wallet-modal-label');
+            const modalAmount = document.getElementById('wallet-modal-amount');
+            
+            if (activeTab === 'passenger') {
+                modalTitle.textContent = 'Wallet Balance';
+                modalLabel.textContent = 'Your Wallet Balance';
+                modalAmount.textContent = `R ${walletBalance.toFixed(2)}`;
+            } else if (activeTab === 'driver') {
+                modalTitle.textContent = 'Today\'s Earnings';
+                modalLabel.textContent = 'Your Today\'s Earnings';
+                modalAmount.textContent = 'R 1,240.00';
+            } else if (activeTab === 'owner') {
+                modalTitle.textContent = 'Available for Withdrawal';
+                modalLabel.textContent = 'Available for Withdrawal';
+                modalAmount.textContent = 'R 8,350.00';
+            } else if (activeTab === 'association') {
+                modalTitle.textContent = 'Association Fees';
+                modalLabel.textContent = 'Association Fees Balance';
+                modalAmount.textContent = 'R 4,250.00';
+            }
+        }
         
         // Bottom navigation functionality
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -1711,14 +2242,24 @@
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
                 
+                const navAction = item.dataset.nav;
+                
                 // Scroll to top when home is clicked
-                if (item.dataset.nav === 'home') {
+                if (navAction === 'home') {
                     window.scrollTo(0, 0);
                 }
-                
-                // Show wallet section when wallet is clicked
-                if (item.dataset.nav === 'wallet') {
-                    document.querySelector('.wallet-balance').scrollIntoView({ behavior: 'smooth' });
+                // Show map modal when map is clicked
+                else if (navAction === 'map') {
+                    openModal('route-map-modal');
+                }
+                // Show wallet modal when wallet is clicked
+                else if (navAction === 'wallet') {
+                    updateWalletModal();
+                    openModal('wallet-modal');
+                }
+                // Show profile modal when profile is clicked
+                else if (navAction === 'profile') {
+                    openModal('profile-modal');
                 }
             });
         });
@@ -1840,9 +2381,25 @@
             openModal('route-map-modal');
         });
         
+        // View history
+        document.getElementById('view-history-btn').addEventListener('click', () => {
+            openModal('history-modal');
+        });
+        
         // Support functionality
         document.getElementById('support-btn').addEventListener('click', () => {
             openModal('support-modal');
+        });
+        
+        // Send support message
+        document.getElementById('send-support-btn').addEventListener('click', () => {
+            closeModal('support-modal');
+            openModal('support-confirmation-modal');
+        });
+        
+        // Support confirmation OK button
+        document.getElementById('support-ok-btn').addEventListener('click', () => {
+            closeModal('support-confirmation-modal');
         });
         
         // Change route functionality
@@ -1866,57 +2423,156 @@
             alert(`Route changed to ${routeName}`);
         });
         
+        // Change vehicle functionality
+        document.getElementById('change-vehicle-btn').addEventListener('click', () => {
+            openModal('change-vehicle-modal');
+        });
+        
+        document.getElementById('confirm-vehicle-change').addEventListener('click', () => {
+            const selectedVehicle = document.getElementById('vehicle-select');
+            const vehicleText = selectedVehicle.options[selectedVehicle.selectedIndex].text;
+            
+            closeModal('change-vehicle-modal');
+            alert(`Vehicle changed to ${vehicleText}`);
+        });
+        
+        // Panic button functionality
+        document.getElementById('passenger-panic-btn').addEventListener('click', function() {
+            openModal('panic-confirmation-modal');
+        });
+        
+        document.getElementById('driver-panic-btn').addEventListener('click', function() {
+            openModal('panic-confirmation-modal');
+        });
+        
+        document.getElementById('confirm-panic-btn').addEventListener('click', () => {
+            closeModal('panic-confirmation-modal');
+            openModal('panic-success-modal');
+        });
+        
+        document.getElementById('cancel-panic-btn').addEventListener('click', () => {
+            closeModal('panic-confirmation-modal');
+        });
+        
+        document.getElementById('panic-ok-btn').addEventListener('click', () => {
+            closeModal('panic-success-modal');
+        });
+        
+        // Wallet modal close button
+        document.getElementById('wallet-close-btn').addEventListener('click', () => {
+            closeModal('wallet-modal');
+        });
+        
+        // Profile modal close button
+        document.getElementById('profile-close-btn').addEventListener('click', () => {
+            closeModal('profile-modal');
+        });
+        
         // Owner app functionality
         document.getElementById('add-vehicle-btn').addEventListener('click', () => {
-            alert('Add Vehicle feature coming soon!');
+            openModal('edit-vehicle-modal');
         });
         
         document.getElementById('remove-vehicle-btn').addEventListener('click', () => {
-            alert('Remove Vehicle feature coming soon!');
+            if(confirm('Are you sure you want to remove this vehicle?')) {
+                alert('Vehicle removed successfully!');
+            }
+        });
+        
+        document.getElementById('save-vehicle-btn').addEventListener('click', () => {
+            closeModal('edit-vehicle-modal');
+            alert('Vehicle details updated successfully!');
         });
         
         document.getElementById('add-driver-btn').addEventListener('click', () => {
-            alert('Add Driver feature coming soon!');
+            openModal('edit-driver-modal');
         });
         
         document.getElementById('remove-driver-btn').addEventListener('click', () => {
-            alert('Remove Driver feature coming soon!');
+            if(confirm('Are you sure you want to remove this driver?')) {
+                alert('Driver removed successfully!');
+            }
+        });
+        
+        document.getElementById('save-driver-btn').addEventListener('click', () => {
+            closeModal('edit-driver-modal');
+            alert('Driver details updated successfully!');
+        });
+        
+        document.getElementById('withdraw-funds-btn').addEventListener('click', () => {
+            openModal('withdraw-funds-modal');
+        });
+        
+        document.getElementById('confirm-withdraw-btn').addEventListener('click', () => {
+            const amount = document.querySelector('#withdraw-funds-modal input[type="number"]').value;
+            if (amount && amount > 0) {
+                document.getElementById('withdraw-amount').textContent = parseFloat(amount).toFixed(2);
+                closeModal('withdraw-funds-modal');
+                openModal('withdraw-success-modal');
+            } else {
+                alert('Please enter a valid amount');
+            }
+        });
+        
+        document.getElementById('withdraw-ok-btn').addEventListener('click', () => {
+            closeModal('withdraw-success-modal');
         });
         
         // Association app functionality
         document.getElementById('add-route-btn').addEventListener('click', () => {
-            alert('Add Route feature coming soon!');
+            openModal('edit-route-modal');
         });
         
         document.getElementById('remove-route-btn').addEventListener('click', () => {
-            alert('Remove Route feature coming soon!');
+            if(confirm('Are you sure you want to remove this route?')) {
+                alert('Route removed successfully!');
+            }
+        });
+        
+        document.getElementById('save-route-btn').addEventListener('click', () => {
+            closeModal('edit-route-modal');
+            alert('Route details updated successfully!');
         });
         
         document.getElementById('edit-fare-btn').addEventListener('click', () => {
-            alert('Edit Fare Rates feature coming soon!');
+            openModal('edit-route-modal');
         });
         
         document.getElementById('add-member-btn').addEventListener('click', () => {
-            alert('Add Member feature coming soon!');
+            openModal('edit-member-modal');
         });
         
         document.getElementById('remove-member-btn').addEventListener('click', () => {
-            alert('Remove Member feature coming soon!');
+            if(confirm('Are you sure you want to remove this member?')) {
+                alert('Member removed successfully!');
+            }
+        });
+        
+        document.getElementById('save-member-btn').addEventListener('click', () => {
+            closeModal('edit-member-modal');
+            alert('Member details updated successfully!');
         });
         
         document.getElementById('start-verification-btn').addEventListener('click', () => {
             alert('Verification process started!');
         });
         
-        document.getElementById('resolve-disputes-btn').addEventListener('click', () => {
-            alert('Dispute Resolution feature coming soon!');
+        // Login/Logout functionality
+        document.getElementById('login-logout-btn').addEventListener('click', () => {
+            if (isLoggedIn) {
+                isLoggedIn = false;
+                document.getElementById('login-logout-btn').textContent = 'Login';
+                alert('Logged out successfully!');
+            } else {
+                openModal('login-modal');
+            }
         });
         
-        // Panic button functionality
-        document.querySelector('.panic-button').addEventListener('click', function() {
-            if(confirm('Are you sure you want to trigger the emergency alert?')) {
-                alert('Emergency alert sent to authorities and your emergency contacts! Your location is being shared.');
-            }
+        document.getElementById('confirm-login-btn').addEventListener('click', () => {
+            isLoggedIn = true;
+            document.getElementById('login-logout-btn').textContent = 'Logout';
+            closeModal('login-modal');
+            alert('Logged in successfully!');
         });
         
         // Initialize the application
