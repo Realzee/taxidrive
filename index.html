@@ -313,7 +313,7 @@
         
         /* Buttons */
         .btn {
-            padding: 15px;
+            padding: 8pb 16px;
             border-radius: 10px;
             border: none;
             font-weight: 600;
@@ -330,6 +330,10 @@
         .btn-primary {
             background-color: var(--dark-blue);
             color: var(--white);
+            margin-top: 10px; /* Space above Edit Fare Rates button */
+            display: flex;
+            align-items: center;
+            gap: 5px; /* Space between icon and text */
         }
         
         .btn-secondary {
@@ -775,6 +779,8 @@
             display: flex;
             gap: 10px;
             margin-top: 10px;
+            justify-content: center; /* Center buttons horizontally */
+            padding: 10px;
         }
         
         .add-btn, .remove-btn {
@@ -783,6 +789,9 @@
             border: none;
             font-weight: 600;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px; /* Space between icon and text in each button */
         }
         
         .add-btn {
@@ -794,7 +803,12 @@
             background-color: var(--danger);
             color: var(--white);
         }
-        
+        .edit-fare-btn {
+            margin-top: 10px; /* Space above Edit Fare Rates button */
+            display: flex;
+            align-items: center;
+            gap: 5px; /* Space between icon and text */
+        }
         /* Payment Method Selection */
         .payment-methods {
             display: flex;
