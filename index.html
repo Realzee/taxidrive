@@ -355,7 +355,7 @@
         
         /* Map Container */
         .map-container {
-            height: 300px;
+            height: 250px;
             background-color: #eee;
             border-radius: 12px;
             margin-bottom: 20px;
@@ -773,6 +773,103 @@
             background-color: var(--danger);
             color: var(--white);
         }
+        
+        /* Payment Method Selection */
+        .payment-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .payment-method {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .payment-method:hover {
+            border-color: var(--dark-blue);
+            background-color: rgba(163, 201, 230, 0.1);
+        }
+        
+        .payment-method.selected {
+            border-color: var(--dark-blue);
+            background-color: rgba(163, 201, 230, 0.2);
+        }
+        
+        .payment-method i {
+            font-size: 24px;
+            margin-right: 15px;
+            color: var(--dark-blue);
+        }
+        
+        .payment-method div {
+            flex: 1;
+        }
+        
+        .payment-method .method-name {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        
+        .payment-method .method-desc {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        /* Taxi Details */
+        .taxi-details {
+            margin-bottom: 20px;
+        }
+        
+        .taxi-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .taxi-icon {
+            width: 50px;
+            height: 50px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+        }
+        
+        .taxi-icon i {
+            font-size: 24px;
+            color: var(--dark-blue);
+        }
+        
+        .taxi-info-details h4 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .taxi-info-details p {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .route-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .route-info .list-item {
+            border-bottom: none;
+            padding: 8px 0;
+        }
     </style>
 </head>
 <body>
@@ -832,7 +929,7 @@
             
             <!-- Live Tracking -->
             <div class="section-title">Live Tracking <span class="view-all">View Map</span></div>
-            <div class="map-container" style="height: 300px;">
+            <div class="map-container">
                 <div id="passengerMap" style="height: 100%;"></div>
             </div>
             
@@ -1373,14 +1470,15 @@
         <div class="modal" id="qr-scanner-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <div class="modal-title">Scan to Pay & Ride</div>
+                    <div class="modal-title">Scan Taxi QR Code</div>
                     <div class="modal-close">&times;</div>
                 </div>
                 <div class="qr-scanner">
+                    <div class="qr-text">Scan to Pay & Ride</div>
+                    <div class="qr-subtext">Point your camera at the QR code inside the taxi</div>
                     <div class="qr-placeholder">
                         <i class="fas fa-qrcode"></i>
                     </div>
-                    <div class="qr-subtext">Point your camera at the QR code inside the taxi</div>
                     <div class="qr-subtext">Simulate scanning for demo purposes</div>
                     <button class="btn btn-primary" id="simulate-scan">
                         <i class="fas fa-camera"></i> Simulate Scan
@@ -1389,41 +1487,85 @@
             </div>
         </div>
         
-        <!-- Scan Confirmation Modal -->
-        <div class="modal" id="scan-confirmation-modal">
+        <!-- Taxi Details Modal -->
+        <div class="modal" id="taxi-details-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <div class="modal-title">Confirm Ride Details</div>
+                    <div class="modal-title">Taxi Details</div>
                     <div class="modal-close">&times;</div>
                 </div>
-                <div class="list-item">
-                    <div class="item-info">
-                        <div class="item-icon">
+                <div class="taxi-details">
+                    <div class="taxi-info">
+                        <div class="taxi-icon">
                             <i class="fas fa-taxi"></i>
                         </div>
-                        <div class="item-details">
-                            <h4>Soweto to Johannesburg</h4>
-                            <p>Vehicle: Toyota HiACE (ABC 123 EC)</p>
-                            <p>Driver: Siyabonga M.</p>
+                        <div class="taxi-info-details">
+                            <h4>Toyota HiACE</h4>
+                            <p>Registration: ABC 123 EC</p>
                         </div>
                     </div>
-                    <div class="item-value">R 35.00</div>
+                    
+                    <div class="route-info">
+                        <div class="list-item">
+                            <div class="item-info">
+                                <div class="item-details">
+                                    <h4>Route</h4>
+                                    <p>Soweto to Johannesburg CBD</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-item">
+                            <div class="item-info">
+                                <div class="item-details">
+                                    <h4>Fare</h4>
+                                    <p>Standard rate</p>
+                                </div>
+                            </div>
+                            <div class="item-value">R 35.00</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="item-info">
+                                <div class="item-details">
+                                    <h4>Estimated Time</h4>
+                                    <p>Current traffic conditions</p>
+                                </div>
+                            </div>
+                            <div class="item-value">45 min</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Payment Method</label>
-                    <select class="form-input" id="payment-method-scan">
-                        <option value="">Select payment method</option>
-                        <option value="wallet">Wallet (Balance: R <span id="current-wallet-balance">245.50</span>)</option>
-                        <option value="card">Credit/Debit Card</option>
-                        <option value="mobile">Mobile Money</option>
-                    </select>
+                
+                <div class="section-title">Select Payment Method</div>
+                <div class="payment-methods">
+                    <div class="payment-method" data-method="wallet">
+                        <i class="fas fa-wallet"></i>
+                        <div>
+                            <div class="method-name">Wallet</div>
+                            <div class="method-desc">Pay from your Taxi Drive wallet</div>
+                        </div>
+                    </div>
+                    <div class="payment-method" data-method="cash">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <div>
+                            <div class="method-name">Cash</div>
+                            <div class="method-desc">Pay with cash to the driver</div>
+                        </div>
+                    </div>
+                    <div class="payment-method" data-method="card">
+                        <i class="fas fa-credit-card"></i>
+                        <div>
+                            <div class="method-name">Card</div>
+                            <div class="method-desc">Pay with card on terminal</div>
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-primary" id="confirm-payment-btn">Confirm Payment</button>
+                
+                <button class="btn btn-primary" id="confirm-payment">Confirm Payment</button>
             </div>
         </div>
         
-        <!-- Scan Success Modal -->
-        <div class="modal" id="scan-success-modal">
+        <!-- Payment Success Modal -->
+        <div class="modal" id="payment-success-modal">
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="modal-title">Payment Successful</div>
@@ -1512,6 +1654,7 @@
         let walletBalance = 245.50;
         let currentRoute = "Soweto-Johannesburg CBD";
         let currentFare = 35.00;
+        let selectedPaymentMethod = "";
         let passengerMap, routeMap;
         
         // Initialize maps
@@ -1600,6 +1743,7 @@
             });
         });
         
+        // Close modal when clicking outside
         modals.forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -1644,44 +1788,52 @@
             alert('Send Money feature coming soon!');
         });
         
-        // QR Scanner functionality
+        // QR scan functionality
         document.getElementById('scan-qr-btn').addEventListener('click', () => {
             openModal('qr-scanner-modal');
         });
         
-        // Simulate scan functionality
         document.getElementById('simulate-scan').addEventListener('click', () => {
             closeModal('qr-scanner-modal');
-            document.getElementById('current-wallet-balance').textContent = walletBalance.toFixed(2);
-            openModal('scan-confirmation-modal');
+            openModal('taxi-details-modal');
         });
         
-        // Confirm payment functionality
-        document.getElementById('confirm-payment-btn').addEventListener('click', () => {
-            const paymentMethod = document.getElementById('payment-method-scan').value;
-            
-            if (!paymentMethod) {
+        // Payment method selection
+        document.querySelectorAll('.payment-method').forEach(method => {
+            method.addEventListener('click', () => {
+                document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+                method.classList.add('selected');
+                selectedPaymentMethod = method.dataset.method;
+            });
+        });
+        
+        // Confirm payment
+        document.getElementById('confirm-payment').addEventListener('click', () => {
+            if (!selectedPaymentMethod) {
                 alert('Please select a payment method');
                 return;
             }
             
-            if (paymentMethod === 'wallet' && walletBalance < currentFare) {
-                alert('Insufficient balance. Please add money to your wallet.');
-                return;
+            if (selectedPaymentMethod === 'wallet') {
+                if (walletBalance >= currentFare) {
+                    walletBalance -= currentFare;
+                    document.getElementById('wallet-balance').textContent = `R ${walletBalance.toFixed(2)}`;
+                    closeModal('taxi-details-modal');
+                    openModal('payment-success-modal');
+                } else {
+                    alert('Insufficient balance. Please add money to your wallet.');
+                    closeModal('taxi-details-modal');
+                    openModal('add-money-modal');
+                }
+            } else {
+                closeModal('taxi-details-modal');
+                openModal('payment-success-modal');
             }
-            
-            if (paymentMethod === 'wallet') {
-                walletBalance -= currentFare;
-                document.getElementById('wallet-balance').textContent = `R ${walletBalance.toFixed(2)}`;
-            }
-            
-            closeModal('scan-confirmation-modal');
-            openModal('scan-success-modal');
         });
         
-        // View route after successful scan
+        // View route after successful payment
         document.getElementById('view-route-btn').addEventListener('click', () => {
-            closeModal('scan-success-modal');
+            closeModal('payment-success-modal');
             openModal('route-map-modal');
         });
         
