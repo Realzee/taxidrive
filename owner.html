@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>TaxiDrive - Owner</title>
+    <!-- Cordova/Capacitor Setup Instructions
+         1. Initialize a Cordova project: `cordova create taxidrive-owner com.taxidrive.owner TaxiDriveOwner`
+         2. Add platforms: `cordova platform add android`
+         3. Add plugins: `cordova plugin add cordova-plugin-geolocation`
+         4. Place this file in the `www` folder
+         5. Update `config.xml` with permissions: `<access origin="*" />` and `<allow-navigation href="*" />`
+         6. Build APK: `cordova build android`
+         7. For Capacitor, use: `npx cap init`, add this file to `public`, and run `npx cap sync`
+    -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dark-blue: #1A2A44;
+            --light-blue: #A3C9E6;
+            --white: #FFFFFF;
+            --gray: #D3D3D3;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: var(--white);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            overflow-x: hidden;
+        }
+        header {
+            background-color: var(--dark-blue);
+            color: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .header-icons i {
+            margin-left: 15px;
+            font-size: 20px;
+        }
+        .app-content {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--dark-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title .view-all {
+            font-size: 12px;
+            color: var(--light-blue);
+            font-weight: 500;
+        }
+        .card {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray);
+        }
+        .wallet-balance {
+            background: linear-gradient(135deg, var(--dark-blue), #2a3b5c);
+            color: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        .balance-amount {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .action-btn {
+            background-color: var(--white);
+            border: 1px solid var(--gray);
+            border-radius: 10px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+        .action-btn i {
+            font-size: 24px;
+            color: var(--dark-blue);
+            margin-bottom: 8px;
+        }
+        .action-btn span {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--dark-blue);
+        }
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray);
+        }
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        .item-info {
+            display: flex;
+            align-items: center;
+        }
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        .item-icon i {
+            color: var(--dark-blue);
+        }
+        .item-details h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        .item-details p {
+            font-size: 12px;
+            color: #666;
+        }
+        .item-value {
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        .btn {
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background-color: var(--dark-blue);
+            color: var(--white);
+        }
+        .btn-secondary {
+            background-color: var(--white);
+            color: var(--dark-blue);
+            border: 1px solid var(--gray);
+        }
+        .btn-success {
+            background-color: var(--success);
+            color: var(--white);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--white);
+            padding: 12px 0;
+            border-top: 1px solid var(--gray);
+        }
+        .nav-item {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .nav-item.active {
+            color: var(--dark-blue);
+            position: relative;
+        }
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background-color: var(--dark-blue);
+            border-radius: 50%;
+        }
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark-blue);
+            margin-bottom: 5px;
+            display: block;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .login-logout-btn {
+            background-color: var(--light-blue);
+            color: var(--dark-blue);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+    </style>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        
+        </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="Logo1.png" alt="TaxiDrive Logo" style="height: 60px; width: auto;">
+                <h1>TDN - Owner</h1>
+            </div>
+            <div class="header-icons">
+                <i class="fas fa-bell"></i>
+                <i class="fas fa-user"></i>
+                <button class="login-logout-btn" id="login-logout-btn">Login</button>
+            </div>
+        </header>
+        <div class="app-content" id="owner-app">
+            <div class="wallet-balance">
+                <div class="balance-label">Today's Earnings</div>
+                <div class="balance-amount" id="wallet-balance">R 0.00</div>
+            </div>
+            <div class="section-title">Quick Actions</div>
+            <div class="quick-actions">
+                <div class="action-btn" id="earnings-history-btn">
+                    <i class="fas fa-history"></i>
+                    <span>Earnings</span>
+                </div>
+                <div class="action-btn" id="fleet-overview-btn">
+                    <i class="fas fa-shuttle-van"></i>
+                    <span>Fleet</span>
+                </div>
+                <div class="action-btn" id="driver-management-btn">
+                    <i class="fas fa-users"></i>
+                    <span>Drivers</span>
+                </div>
+                <div class="action-btn" id="withdraw-btn">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Withdraw</span>
+                </div>
+            </div>
+            <div class="section-title">Fleet Overview <span class="view-all" id="fleet-overview-btn">View All</span></div>
+            <div class="card" id="fleet-vehicles"></div>
+            <div class="section-title">Recent Earnings <span class="view-all" id="earnings-history-btn">View All</span></div>
+            <div class="card" id="recent-earnings"></div>
+        </div>
+        <div class="bottom-nav">
+            <div class="nav-item active" data-nav="home">
+                <i class="fas fa-home"></i>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" data-nav="earnings">
+                <i class="fas fa-wallet"></i>
+                <div>Earnings</div>
+            </div>
+            <div class="nav-item" data-nav="fleet">
+                <i class="fas fa-shuttle-van"></i>
+                <div>Fleet</div>
+            </div>
+            <div class="nav-item" data-nav="profile">
+                <i class="fas fa-user"></i>
+                <div>Profile</div>
+            </div>
+        </div>
+        <div class="modal" id="earnings-history-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Earnings History</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Period</label>
+                    <select class="form-input" id="earnings-period">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="card" id="earnings-list"></div>
+                <div class="section-title">Total: R <span id="earnings-total">0.00</span></div>
+            </div>
+        </div>
+        <div class="modal" id="fleet-overview-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Fleet Overview</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="card" id="fleet-list"></div>
+                <button class="btn btn-primary" id="add-vehicle-btn">Add Vehicle</button>
+                <button class="btn btn-primary" id="maintain-vehicle-btn">Maintain Vehicles</button>
+            </div>
+        </div>
+        <div class="modal" id="add-vehicle-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Add Vehicle</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vehicle Model</label>
+                    <input type="text" class="form-input" id="vehicle-model" placeholder="Enter vehicle model">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Registration Number</label>
+                    <input type="text" class="form-input" id="vehicle-reg" placeholder="Enter registration number">
+                </div>
+                <button class="btn btn-primary" id="confirm-add-vehicle">Add Vehicle</button>
+            </div>
+        </div>
+        <div class="modal" id="maintain-vehicle-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Maintain Vehicles</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vehicle</label>
+                    <select class="form-input" id="maintenance-vehicle"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-input" id="maintenance-type">
+                        <option value="repair">Repair</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="fuel">Fuel</option>
+                        <option value="toll">Toll</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-input" id="maintenance-amount" placeholder="Enter amount">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" id="maintenance-description" placeholder="Enter description"></textarea>
+                </div>
+                <button class="btn btn-primary" id="confirm-maintenance">Log Maintenance</button>
+            </div>
+        </div>
+        <div class="modal" id="driver-management-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Driver Management</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="card" id="driver-list"></div>
+                <button class="btn btn-primary" id="add-driver-btn">Add Driver</button>
+                <button class="btn btn-primary" id="manage-driver-btn">Manage Driver</button>
+            </div>
+        </div>
+        <div class="modal" id="add-driver-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Add Driver</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Driver Email</label>
+                    <input type="email" class="form-input" id="driver-email" placeholder="Enter driver email">
+                </div>
+                <button class="btn btn-primary" id="confirm-add-driver">Add Driver</button>
+            </div>
+        </div>
+        <div class="modal" id="manage-driver-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Manage Driver</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+
+        <div class="modal" id="allocate-vehicle-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Allocate Vehicle to Driver</div>
+            <div class="modal-close">&times;</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Select Vehicle</label>
+            <select class="form-input" id="allocate-vehicle-select"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Select Driver</label>
+            <select class="form-input" id="allocate-driver-select"></select>
+        </div>
+        <button class="btn btn-primary" id="confirm-allocate-vehicle">Allocate</button>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" id="allocate-vehicle-btn">Allocate Vehicle</button>
+                <div class="form-group">
+                    <label class="form-label">Driver</label>
+                    <select class="form-input" id="manage-driver-select"></select>
+                </div>
+                <div class="card" id="driver-behavior"></div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-input" id="driver-notes" placeholder="Enter notes"></textarea>
+                </div>
+                <button class="btn btn-primary" id="save-driver-notes">Save Notes</button>
+            </div>
+        </div>
+        <div class="modal" id="login-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Login / Sign Up</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-input" id="signup-name" placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="login-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="login-password" placeholder="Enter your password">
+                </div>
+                <button class="btn btn-primary" id="signup-btn">Sign Up</button>
+                <button class="btn btn-secondary" id="login-btn">Login</button>
+                <div class="divider">
+                    <span>Or login with</span>
+                </div>
+                <button class="btn btn-google">
+                    <i class="fab fa-google"></i> Google
+                </button>
+            </div>
+        </div>
+        <div class="modal" id="withdraw-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Withdraw Funds</div>
+            <div class="modal-close">&times;</div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Amount</label>
+            <input type="number" class="form-input" id="withdraw-amount" placeholder="Enter amount">
+        </div>
+        <button class="btn btn-primary" id="confirm-withdraw">Withdraw</button>
+    </div>
+        </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>    <script>
+        // Firebase configuration
+        // Import the functions you need from the SDKs you need
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDF4QoPKP02tFadu2pOVlcZRXaA5NcpmY0",
+  authDomain: "taxidrive-337a3.firebaseapp.com",
+  databaseURL: "https://taxidrive-337a3-default-rtdb.firebaseio.com",
+  projectId: "taxidrive-337a3",
+  storageBucket: "taxidrive-337a3.firebasestorage.app",
+  messagingSenderId: "715498763019",
+  appId: "1:715498763019:web:b9fb152a7d5411ebba680e",
+  measurementId: "G-NB9PMBD7DQ"
+};
+
+// Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // Initialize variables
+        let walletBalance = 0;
+        let isLoggedIn = false;
+        let userId = null;
+
+        // Update earnings history
+        function updateEarningsHistory(period = 'daily') {
+    if (!userId) return;
+    const earningsList = document.getElementById('earnings-list');
+    const recentEarnings = document.getElementById('recent-earnings');
+    earningsList.innerHTML = '';
+    recentEarnings.innerHTML = '';
+
+    let total = 0;
+    let driverTotals = {}; // Track earnings per driver
+
+    const now = new Date();
+    const startDate = period === 'daily' ? new Date(now.setHours(0, 0, 0, 0)) :
+                     period === 'weekly' ? new Date(now.setDate(now.getDate() - 7)) :
+                     new Date(now.setDate(now.getDate() - 30));
+
+    db.ref(`users/owners/${userId}/earnings`).once('value', snapshot => {
+        const earnings = snapshot.val() || [];
+        Object.values(earnings).forEach(earning => {
+            const earningDate = new Date(earning.time);
+            if (earningDate >= startDate) {
+                total += earning.amount;
+                // Track by driver
+                const driver = earning.driver || 'Unknown';
+                if (!driverTotals[driver]) driverTotals[driver] = 0;
+                driverTotals[driver] += earning.amount;
+
+                const earningHtml = `
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon"><i class="fas fa-money-bill"></i></div>
+                            <div class="item-details">
+                                <h4>${earning.vehicle}</h4>
+                                <p>${earning.time}</p>
+                                <p><strong>Driver:</strong> ${driver}</p>
+                            </div>
+                        </div>
+                        <div class="item-value">R ${earning.amount.toFixed(2)}</div>
+                    </div>`;
+                earningsList.innerHTML += earningHtml;
+                if (period === 'daily') recentEarnings.innerHTML += earningHtml;
+            }
+        });
+
+        // Show driver totals
+        let driverTotalsHtml = '';
+        Object.entries(driverTotals).forEach(([driver, amount]) => {
+            driverTotalsHtml += `
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon"><i class="fas fa-user"></i></div>
+                        <div class="item-details">
+                            <h4>${driver}</h4>
+                        </div>
+                    </div>
+                    <div class="item-value">R ${amount.toFixed(2)}</div>
+                </div>`;
+        });
+        // Add driver totals above earnings list
+        earningsList.innerHTML = driverTotalsHtml + earningsList.innerHTML;
+
+        document.getElementById('earnings-total').textContent = total.toFixed(2);
+        if (period === 'daily') {
+            document.getElementById('wallet-balance').textContent = `R ${total.toFixed(2)}`;
+        }
+    }).catch(error => {
+        alert('Error loading earnings: ' + error.message);
+    });
+}
+        // Update fleet overview
+        function updateFleetOverview() {
+            if (!userId) return;
+            const fleetList = document.getElementById('fleet-list');
+            const fleetVehicles = document.getElementById('fleet-vehicles');
+            fleetList.innerHTML = '';
+            fleetVehicles.innerHTML = '';
+            db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
+    const vehicles = snapshot.val() || {};
+    fleetList.innerHTML = '';
+    fleetVehicles.innerHTML = '';
+    Object.entries(vehicles).forEach(([index, vehicle]) => {
+        let driverName = 'Unassigned';
+        if (vehicle.driverId) {
+            db.ref(`users/owners/${userId}/drivers/${vehicle.driverId}`).once('value', driverSnap => {
+                driverName = driverSnap.val()?.name || 'Unassigned';
+                const vehicleHtml = `
+                    <div class="list-item" data-vehicle-index="${index}">
+                        <div class="item-info">
+                            <div class="item-icon"><i class="fas fa-shuttle-van"></i></div>
+                            <div class="item-details">
+                                <h4>${vehicle.model}</h4>
+                                <p>${vehicle.reg}</p>
+                                <p><strong>Driver:</strong> ${driverName}</p>
+                                <p><strong>Total Earnings:</strong> R ${vehicle.totalEarnings ? vehicle.totalEarnings.toFixed(2) : '0.00'}</p>
+                            </div>
+                        </div>
+                    </div>`;
+                fleetList.innerHTML += vehicleHtml;
+                fleetVehicles.innerHTML += vehicleHtml;
+            });
+        } else {
+            const vehicleHtml = `
+                <div class="list-item" data-vehicle-index="${index}">
+                    <div class="item-info">
+                        <div class="item-icon"><i class="fas fa-shuttle-van"></i></div>
+                        <div class="item-details">
+                            <h4>${vehicle.model}</h4>
+                            <p>${vehicle.reg}</p>
+                            <p><strong>Driver:</strong> ${driverName}</p>
+                            <p><strong>Total Earnings:</strong> R ${vehicle.totalEarnings ? vehicle.totalEarnings.toFixed(2) : '0.00'}</p>
+                        </div>
+                    </div>
+                </div>`;
+            fleetList.innerHTML += vehicleHtml;
+            fleetVehicles.innerHTML += vehicleHtml;
+        }
+            setTimeout(() => {
+    document.querySelectorAll('.remove-vehicle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const vehicleId = btn.getAttribute('data-vehicle-index');
+            if (confirm('Are you sure you want to remove this vehicle from your fleet?')) {
+                db.ref(`users/owners/${userId}/vehicles/${vehicleId}`).remove()
+                .then(() => {
+                    updateFleetOverview();
+                    alert('Vehicle removed successfully!');
+                })
+                .catch(error => {
+                    alert('Error removing vehicle: ' + error.message);
+                });
+            }
+        });
+    });
+}, 100); // Wait for DOM update     
+    });
+    updateMaintenanceDropdown();
+    
+    let fleetTotalEarnings = 0;
+Object.entries(vehicles).forEach(([index, vehicle]) => {
+    let vehicleTotal = 0;
+    if (vehicle.earnings) {
+        Object.values(vehicle.earnings).forEach(e => {
+            vehicleTotal += e.amount;
+        });
+    }
+    fleetTotalEarnings += vehicleTotal;
+    vehicle.totalEarnings = vehicleTotal; // Attach for display above
+    // ...rest of vehicleHtml code...
+});
+});
+        }
+
+        // Update maintenance dropdown
+        function updateMaintenanceDropdown() {
+            const select = document.getElementById('maintenance-vehicle');
+            select.innerHTML = '';
+            db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
+                const vehicles = snapshot.val() || [];
+                Object.entries(vehicles).forEach(([index, vehicle]) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${vehicle.model} (${vehicle.reg})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // Update driver management
+        function updateDriverManagement() {
+    if (!userId) return;
+    const driverList = document.getElementById('driver-list');
+    const driverSelect = document.getElementById('manage-driver-select');
+    driverList.innerHTML = '';
+    driverSelect.innerHTML = '';
+    db.ref(`users/owners/${userId}/drivers`).on('value', snapshot => {
+        const drivers = snapshot.val() || {};
+        Object.entries(drivers).forEach(([index, driver]) => {
+            // Fetch live data from driver node
+            db.ref(`users/drivers/${driver.driverId}`).once('value', driverSnap => {
+                const driverData = driverSnap.val() || {};
+                const status = driverData.onDuty ? 'On Duty' : 'Off Duty';
+                const statusColor = driverData.onDuty ? 'var(--success)' : 'var(--danger)';
+                const route = driverData.currentRoute || 'N/A';
+                // Calculate today's earnings from driver trips
+                let earningsToday = 0;
+                const today = new Date().toISOString().slice(0, 10);
+                if (driverData.trips) {
+                    Object.values(driverData.trips).forEach(trip => {
+                        if (trip.timestamp && trip.timestamp.slice(0, 10) === today) {
+                            earningsToday += Number(trip.amount) || 0;
+                        }
+                    });
+                }
+                const driverHtml = `
+                    <div class="list-item" data-driver-index="${index}">
+                        <div class="item-info">
+                            <div class="item-icon"><i class="fas fa-user"></i></div>
+                            <div class="item-details">
+                                <h4>${driverData.name || driver.name}</h4>
+                                <p>${driverData.email || driver.email}</p>
+                                <p style="color:${statusColor};font-weight:600;">${status}</p>
+                                <p><strong>Current Route:</strong> ${route}</p>
+                                <p><strong>Today's Earnings:</strong> R ${earningsToday.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    </div>`;
+                driverList.innerHTML += driverHtml;
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = driverData.name || driver.name;
+                driverSelect.appendChild(option);
+            });
+        });
+
+        updateDriverBehavior();
+    }, error => {
+        alert('Error loading drivers: ' + error.message);
+    });
+}
+        // Update driver behavior
+function updateDriverBehavior() {
+    const driverSelect = document.getElementById('manage-driver-select');
+    const behaviorList = document.getElementById('driver-behavior');
+    behaviorList.innerHTML = '';
+    if (!driverSelect.value) return;
+    db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior`).once('value', snapshot => {
+        const behaviors = snapshot.val() || {};
+        Object.entries(behaviors).forEach(([index, behavior]) => {
+            const behaviorHtml = `
+                <div class="list-item" data-behavior-index="${index}">
+                    <div class="item-info">
+                        <div class="item-icon"><i class="fas fa-comment"></i></div>
+                        <div class="item-details">
+                            <h4>${behavior.subject || 'Comment'}</h4>
+                            <p>${behavior.message || ''} - ${behavior.time || ''}</p>
+                            <p><strong>Passenger Email:</strong> ${behavior.passengerEmail || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-success resolve-comment-btn" data-comment-id="${index}">Resolve</button>
+                    <button class="btn btn-secondary reply-comment-btn" data-email="${behavior.passengerEmail}">Reply</button>
+                </div>`;
+            behaviorList.innerHTML += behaviorHtml;
+        });
+
+        // Add event listener for reply
+        document.querySelectorAll('.reply-comment-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const email = btn.dataset.email;
+                if (email && email !== 'N/A') {
+                    window.location.href = `mailto:${email}?subject=Reply from TaxiDrive Owner`;
+                } else {
+                    alert('No passenger email available.');
+                }
+            });
+        });
+
+        // Add event listener for resolve
+        document.querySelectorAll('.resolve-comment-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const commentId = btn.dataset.commentId;
+                db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior/${commentId}`).remove();
+                updateDriverBehavior();
+            });
+        });
+    });
+}
+
+// Add event listener for reply
+document.querySelectorAll('.reply-comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const email = btn.dataset.email;
+        if (email && email !== 'N/A') {
+            window.location.href = `mailto:${email}?subject=Reply from TaxiDrive Owner`;
+        } else {
+            alert('No passenger email available.');
+        }
+    });
+});
+// Add event listener for resolve
+document.querySelectorAll('.resolve-comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const commentId = btn.dataset.commentId;
+        db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior/${commentId}`).remove();
+        updateDriverBehavior();
+    });
+});
+        document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('withdraw-btn').addEventListener('click', () => {
+        openModal('withdraw-modal');
+    });
+    document.getElementById('confirm-withdraw').addEventListener('click', () => {
+        const amount = parseFloat(document.getElementById('withdraw-amount').value);
+        if (amount > 0 && amount <= walletBalance) {
+            walletBalance -= amount;
+            db.ref(`users/owners/${userId}/walletBalance`).set(walletBalance).then(() => {
+                document.getElementById('wallet-balance').textContent = `R ${walletBalance.toFixed(2)}`;
+                closeModal('withdraw-modal');
+                alert('Withdrawal successful!');
+            });
+        } else {
+            alert('Invalid amount or insufficient funds');
+        }
+    });
+    // ...add other event listeners here...
+});
+        // Modal functionality
+        const modals = document.querySelectorAll('.modal');
+        const closeModalButtons = document.querySelectorAll('.modal-close');
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                button.closest('.modal').style.display = 'none';
+            });
+        });
+
+        modals.forEach(modal => {
+            modal.addEventListener('click', e => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+
+        // Bottom navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                const navAction = item.dataset.nav;
+                if (navAction === 'home') {
+                    window.scrollTo(0, 0);
+                } else if (navAction === 'earnings') {
+                    updateEarningsHistory();
+                    openModal('earnings-history-modal');
+                } else if (navAction === 'fleet') {
+                    updateFleetOverview();
+                    openModal('fleet-overview-modal');
+                } else if (navAction === 'profile') {
+                    openModal('login-modal');
+                }
+            });
+        });
+
+        // Earnings history
+        document.getElementById('earnings-history-btn').addEventListener('click', () => {
+            updateEarningsHistory();
+            openModal('earnings-history-modal');
+        });
+
+        document.getElementById('earnings-period').addEventListener('change', (e) => {
+            updateEarningsHistory(e.target.value);
+        });
+
+        // Fleet overview
+        document.getElementById('fleet-overview-btn').addEventListener('click', () => {
+            updateFleetOverview();
+            openModal('fleet-overview-modal');
+        });
+
+        document.getElementById('add-vehicle-btn').addEventListener('click', () => {
+            openModal('add-vehicle-modal');
+        });
+
+        document.getElementById('confirm-add-vehicle').addEventListener('click', () => {
+            const model = document.getElementById('vehicle-model').value;
+            const reg = document.getElementById('vehicle-reg').value;
+            if (model && reg) {
+                db.ref(`users/owners/${userId}/vehicles`).push({
+                    model: model,
+                    reg: reg,
+                    driverId: ''
+                }).then(() => {
+                    updateFleetOverview();
+                    closeModal('add-vehicle-modal');
+                    alert('Vehicle added successfully!');
+                }).catch(error => {
+                    alert('Error adding vehicle: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        document.getElementById('maintain-vehicle-btn').addEventListener('click', () => {
+            updateMaintenanceDropdown();
+            openModal('maintain-vehicle-modal');
+        });
+
+        document.getElementById('confirm-maintenance').addEventListener('click', () => {
+            const vehicleIndex = document.getElementById('maintenance-vehicle').value;
+            const type = document.getElementById('maintenance-type').value;
+            const amount = parseFloat(document.getElementById('maintenance-amount').value);
+            const description = document.getElementById('maintenance-description').value;
+            if (vehicleIndex && type && amount && description) {
+                db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}/maintenance`).push({
+                    type: type,
+                    amount: amount,
+                    description: description,
+                    date: new Date().toLocaleString()
+                }).then(() => {
+                    closeModal('maintain-vehicle-modal');
+                    alert('Maintenance logged successfully!');
+                }).catch(error => {
+                    alert('Error logging maintenance: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        // Driver management
+        document.getElementById('driver-management-btn').addEventListener('click', () => {
+            updateDriverManagement();
+            openModal('driver-management-modal');
+        });
+
+        document.getElementById('add-driver-btn').addEventListener('click', () => {
+            openModal('add-driver-modal');
+        });
+
+        document.getElementById('confirm-add-driver').addEventListener('click', () => {
+    const email = document.getElementById('driver-email').value;
+    if (email) {
+        db.ref('users/drivers').orderByChild('email').equalTo(email).once('value', snapshot => {
+            if (!snapshot.exists()) {
+                alert('Driver not found. Please make sure the driver has signed up.');
+                return;
+            }
+            const driverId = Object.keys(snapshot.val())[0];
+            const driverData = snapshot.val()[driverId];
+            if (!driverData.name) {
+                alert('Driver record found, but missing name. Please check driver registration.');
+                return;
+            }
+            // Add driver to owner's list (use .push() for object, not array)
+            db.ref(`users/owners/${userId}/drivers`).push({
+                driverId: driverId,
+                name: driverData.name,
+                email: email,
+                onDuty: false, // default to off duty
+                behavior: []
+            }).then(() => {
+                // Link owner to driver
+                db.ref(`users/drivers/${driverId}/vehicle`).update({
+                    ownerId: userId
+                });
+                updateDriverManagement();
+                closeModal('add-driver-modal');
+                alert('Driver added successfully!');
+            }).catch(error => {
+                alert('Error adding driver: ' + error.message);
+            });
+        });
+    } else {
+        alert('Please enter driver email');
+    }
+});
+        document.getElementById('manage-driver-btn').addEventListener('click', () => {
+            updateDriverManagement();
+            openModal('manage-driver-modal');
+        });
+
+        document.getElementById('manage-driver-select').addEventListener('change', () => {
+            updateDriverBehavior();
+        });
+
+        document.getElementById('save-driver-notes').addEventListener('click', () => {
+            const driverIndex = document.getElementById('manage-driver-select').value;
+            const notes = document.getElementById('driver-notes').value;
+            if (driverIndex && notes) {
+                db.ref(`users/owners/${userId}/drivers/${driverIndex}/notes`).push({
+                    note: notes,
+                    time: new Date().toLocaleString()
+                }).then(() => {
+                    closeModal('manage-driver-modal');
+                    alert('Notes saved successfully!');
+                }).catch(error => {
+                    alert('Error saving notes: ' + error.message);
+                });
+            } else {
+                alert('Please enter notes');
+            }
+        });
+
+        // Authentication
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                isLoggedIn = true;
+                userId = user.uid;
+                document.getElementById('login-logout-btn').textContent = 'Logout';
+                db.ref(`users/owners/${userId}`).once('value', snapshot => {
+                    const data = snapshot.val();
+                    walletBalance = data?.walletBalance || 0;
+                    document.getElementById('wallet-balance').textContent = `R ${Number(walletBalance).toFixed(2)}`;
+                    if (!data) {
+                        db.ref(`users/owners/${userId}`).set({
+                            email: user.email,
+                            name: document.getElementById('signup-name').value || 'Owner',
+                            walletBalance: 0,
+                            vehicles: [],
+                            drivers: []
+                        });
+                    }
+                    updateEarningsHistory();
+                    updateFleetOverview();
+                    updateDriverManagement();
+                });
+            } else {
+                isLoggedIn = false;
+                userId = null;
+                walletBalance = 0;
+                document.getElementById('wallet-balance').textContent = 'R 0.00';
+                document.getElementById('login-logout-btn').textContent = 'Login';
+            }
+        });
+
+        document.getElementById('login-logout-btn').addEventListener('click', () => {
+            if (isLoggedIn) {
+                auth.signOut().then(() => {
+                    alert('Logged out successfully!');
+                }).catch(error => {
+                    alert('Error logging out: ' + error.message);
+                });
+            } else {
+                openModal('login-modal');
+            }
+        });
+
+        document.getElementById('signup-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const name = document.getElementById('signup-name').value;
+            if (email && password && name) {
+                auth.createUserWithEmailAndPassword(email, password).then(userCredential => {
+                    db.ref(`users/owners/${userCredential.user.uid}`).set({
+                        email: email,
+                        name: name,
+                        walletBalance: 0,
+                        vehicles: [],
+                        drivers: []
+                    });
+                    closeModal('login-modal');
+                    alert('Signed up successfully!');
+                }).catch(error => {
+                    alert('Error signing up: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if (email && password) {
+                auth.signInWithEmailAndPassword(email, password).then(() => {
+                    closeModal('login-modal');
+                    alert('Logged in successfully!');
+                }).catch(error => {
+                    alert('Error logging in: ' + error.message);
+                });
+            } else {
+                alert('Please enter email and password');
+            }
+        });
+
+        document.querySelector('.btn-google').addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then(result => {
+                db.ref(`users/owners/${result.user.uid}`).once('value', snapshot => {
+                    if (!snapshot.exists()) {
+                        db.ref(`users/owners/${result.user.uid}`).set({
+                            email: result.user.email,
+                            name: result.user.displayName || 'Owner',
+                            walletBalance: 0,
+                            vehicles: [],
+                            drivers: []
+                        });
+                    }
+                    closeModal('login-modal');
+                    alert('Logged in with Google!');
+                });
+            }).catch(error => {
+                alert('Error logging in with Google: ' + error.message);
+            });
+        });
+
+        // Initialize application
+        window.onload = function() {
+            updateEarningsHistory();
+            updateFleetOverview();
+            updateDriverManagement();
+        };
+        
+        // ...existing code...
+
+// Open allocation modal
+document.getElementById('allocate-vehicle-btn').addEventListener('click', () => {
+    // Populate vehicles
+    const vehicleSelect = document.getElementById('allocate-vehicle-select');
+    vehicleSelect.innerHTML = '';
+    db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
+        const vehicles = snapshot.val() || {};
+        Object.entries(vehicles).forEach(([key, vehicle]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = `${vehicle.model} (${vehicle.reg})`;
+            vehicleSelect.appendChild(option);
+        });
+    });
+
+    // Populate drivers
+    const driverSelect = document.getElementById('allocate-driver-select');
+    driverSelect.innerHTML = '';
+    db.ref(`users/owners/${userId}/drivers`).once('value', snapshot => {
+        const drivers = snapshot.val() || {};
+        Object.entries(drivers).forEach(([key, driver]) => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = driver.name;
+            driverSelect.appendChild(option);
+        });
+    });
+
+    openModal('allocate-vehicle-modal');
+});
+
+// Confirm allocation
+document.getElementById('confirm-allocate-vehicle').addEventListener('click', () => {
+    const vehicleKey = document.getElementById('allocate-vehicle-select').value;
+    const driverKey = document.getElementById('allocate-driver-select').value;
+    if (vehicleKey && driverKey) {
+        // Set driverId on vehicle
+        db.ref(`users/owners/${userId}/vehicles/${vehicleKey}/driverId`).set(driverKey)
+        .then(() => {
+            // Optionally, set vehicleId on driver
+            db.ref(`users/owners/${userId}/drivers/${driverKey}/vehicleId`).set(vehicleKey);
+            closeModal('allocate-vehicle-modal');
+            updateFleetOverview();
+            updateDriverManagement();
+            alert('Vehicle allocated to driver!');
+        }).catch(error => {
+            alert('Error allocating vehicle: ' + error.message);
+        });
+    } else {
+        alert('Please select both vehicle and driver');
+    }
+});
+
+// ...existing code...
+    </script>
+</body>
+</html>
