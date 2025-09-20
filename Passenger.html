@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passenger App - TaxiDrive</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --dark-blue: #1A2A44;
+            --light-blue: #A3C9E6;
+            --white: #FFFFFF;
+            --gray: #D3D3D3;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: var(--white);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        header {
+            background-color: var(--dark-blue);
+            color: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        
+        .user-info {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .user-profile:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        .user-role {
+            font-size: 11px;
+            opacity: 0.8;
+            line-height: 1.2;
+        }
+        .header-icons i {
+            margin-left: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        .header-icons i:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .app-content {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+        
+        .wallet-balance {
+            background-color: var(--light-blue);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .balance-label {
+            font-size: 14px;
+            color: var(--dark-blue);
+            margin-bottom: 5px;
+        }
+        
+        .balance-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dark-blue);
+            margin-bottom: 15px;
+        }
+        
+        .wallet-actions {
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .wallet-btn {
+            padding: 10px;
+            background-color: var(--dark-blue);
+            color: var(--white);
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .wallet-btn:hover {
+            background-color: #15233a;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--dark-blue);
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .action-btn {
+            background-color: var(--white);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray);
+            transition: transform 0.2s;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-3px);
+        }
+        
+        .action-btn i {
+            font-size: 24px;
+            color: var(--dark-blue);
+            margin-bottom: 10px;
+        }
+        
+        .action-btn span {
+            font-size: 14px;
+            color: var(--dark-blue);
+            font-weight: 500;
+        }
+        
+        .card {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray);
+        }
+        
+        .qr-scanner {
+            text-align: center;
+        }
+        
+        .qr-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--dark-blue);
+            margin-bottom: 10px;
+        }
+        
+        .qr-subtext {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            background-color: #f0f0f0;
+            border: 2px dashed var(--gray);
+            border-radius: 8px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qr-placeholder i {
+            font-size: 40px;
+            color: var(--gray);
+        }
+        
+        .btn {
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            background-color: var(--dark-blue);
+            color: var(--white);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        
+        .btn:hover {
+            background-color: #15233a;
+            transform: translateY(-2px);
+        }
+        
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray);
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        
+        .item-icon i {
+            color: var(--dark-blue);
+            font-size: 18px;
+        }
+        
+        .item-details h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+            color: var(--dark-blue);
+            font-weight: 500;
+        }
+        
+        .item-details p {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .item-value {
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        
+        .map-container {
+            height: 200px;
+            background-color: #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .panic-button {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--danger);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(244, 67, 54, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .panic-button i {
+            font-size: 24px;
+            color: var(--white);
+        }
+        
+        .panic-button:hover {
+            transform: scale(1.1);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--white);
+            padding: 12px 0;
+            border-top: 1px solid var(--gray);
+            z-index: 100;
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active {
+            color: var(--dark-blue);
+        }
+
+        .nav-item:hover {
+            color: #15233a;
+        }
+
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark-blue);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--dark-blue);
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="Logo1.png" alt="TaxiDrive Logo">
+                <h1>TaxiDrive</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-profile" id="user-profile">
+                    <div class="user-avatar" id="user-avatar">P</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name">Loading...</div>
+                        <div class="user-role" id="user-role">Passenger</div>
+                    </div>
+                </div>
+                <div class="header-icons">
+                    <i class="fas fa-bell" id="notifications-btn"></i>
+                    <i class="fas fa-sign-out-alt" id="logout-btn"></i>
+                </div>
+            </div>
+        </header>
+        <div class="app-content" id="passenger-app">
+            <!-- Wallet Balance -->
+            <div class="wallet-balance">
+                <div class="balance-label">Your Wallet Balance</div>
+                <div class="balance-amount" id="wallet-balance">R 245.50</div>
+                <div class="wallet-actions">
+                    <div class="wallet-btn" id="add-money-btn">Add Money</div>
+                    <div class="wallet-btn" id="send-money-btn">Send Money</div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="section-title">Quick Actions</div>
+            <div class="quick-actions">
+                <div class="action-btn" id="scan-qr-btn">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Scan QR</span>
+                </div>
+                <div class="action-btn" id="view-routes-btn">
+                    <i class="fas fa-route"></i>
+                    <span>Routes</span>
+                </div>
+                <div class="action-btn" id="view-history-btn">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </div>
+                <div class="action-btn" id="support-btn">
+                    <i class="fas fa-comment"></i>
+                    <span>Support</span>
+                </div>
+            </div>
+            
+            <!-- QR Scanner Section -->
+            <div class="card">
+                <div class="qr-scanner">
+                    <div class="qr-text">Scan to Pay & Ride</div>
+                    <div class="qr-subtext">Point your camera at the QR code inside the taxi</div>
+                    <div class="qr-placeholder">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <div class="qr-subtext">Simulate scanning for demo purposes</div>
+                    <button class="btn btn-primary" id="simulate-scan">
+                        <i class="fas fa-camera"></i> Simulate Scan
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Recent Rides -->
+            <div class="section-title">Recent Rides</div>
+            <div class="card">
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-taxi"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Soweto to Johannesburg</h4>
+                            <p>Today, 08:15 AM</p>
+                        </div>
+                    </div>
+                    <div class="item-value">R 35.00</div>
+                </div>
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-taxi"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Alexandra to Sandton</h4>
+                            <p>Yesterday, 05:30 PM</p>
+                        </div>
+                    </div>
+                    <div class="item-value">R 42.50</div>
+                </div>
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-taxi"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Pretoria to Midrand</h4>
+                            <p>12 Oct, 07:45 AM</p>
+                        </div>
+                    </div>
+                    <div class="item-value">R 60.00</div>
+                </div>
+            </div>
+            
+            <!-- Live Tracking -->
+            <div class="section-title">Live Tracking <span class="view-all">View Map</span></div>
+            <div class="map-container">
+                <div id="passengerMap" style="height: 100%;"></div>
+            </div>
+            
+            <!-- Panic Button -->
+            <div class="panic-button">
+                <i class="fas fa-exclamation"></i>
+            </div>
+        </div>
+
+        <!-- Add Money Modal -->
+        <div id="add-money-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Add Money</h2>
+                    <span class="modal-close" onclick="closeModal('add-money-modal')">&times;</span>
+                </div>
+                <form id="add-money-form">
+                    <div class="form-group">
+                        <label class="form-label">Amount (R)</label>
+                        <input type="number" class="form-input" id="add-money-amount" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Method</label>
+                        <select class="form-input" id="payment-method" required>
+                            <option value="">Select Method</option>
+                            <option value="bank-card">Bank Card</option>
+                            <option value="voucher">Voucher</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="voucher-code-group" style="display:none;">
+                        <label class="form-label">Voucher Code</label>
+                        <input type="text" class="form-input" id="voucher-code" maxlength="20">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Money</button>
+                    <button type="button" class="btn" onclick="closeModal('add-money-modal')">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Send Money Modal -->
+        <div id="send-money-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Send Money</h2>
+                    <span class="modal-close" onclick="closeModal('send-money-modal')">&times;</span>
+                </div>
+                <form id="send-money-form">
+                    <div class="form-group">
+                        <label class="form-label">Recipient Passenger ID</label>
+                        <input type="text" class="form-input" id="recipient-id" maxlength="50" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount (R)</label>
+                        <input type="number" class="form-input" id="send-money-amount" step="0.01" min="0" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Money</button>
+                    <button type="button" class="btn" onclick="closeModal('send-money-modal')">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active" data-nav="home">
+                <i class="fas fa-home"></i>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" data-nav="map">
+                <i class="fas fa-map-marker-alt"></i>
+                <div>Map</div>
+            </div>
+            <div class="nav-item" data-nav="wallet">
+                <i class="fas fa-wallet"></i>
+                <div>Wallet</div>
+            </div>
+            <div class="nav-item" data-nav="profile">
+                <i class="fas fa-user"></i>
+                <div>Profile</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js" defer></script>
+    <script defer>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Modal functions
+            function openModal(modalId) {
+                console.log('Opening modal:', modalId);
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.style.display = 'flex';
+                    console.log('Modal display set to flex');
+                } else {
+                    console.log('Modal not found:', modalId);
+                }
+            }
+
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.style.display = 'none';
+            }
+
+            // Add modal button listeners
+            document.getElementById('add-money-btn')?.addEventListener('click', () => {
+                console.log('Add Money button clicked');
+                openModal('add-money-modal');
+            });
+
+            document.getElementById('send-money-btn')?.addEventListener('click', () => {
+                console.log('Send Money button clicked');
+                openModal('send-money-modal');
+            });
+
+            const firebaseConfig = {
+                apiKey: "your-api-key",
+                authDomain: "your-auth-domain",
+                databaseURL: "https://taxi-drive-12345-default-rtdb.firebaseio.com",
+                projectId: "taxi-drive-12345",
+                storageBucket: "taxi-drive-12345.appspot.com",
+                messagingSenderId: "123456789012",
+                appId: "1:123456789012:web:abcdef1234567890"
+            };
+
+            let firebaseApp = null;
+            let auth = null;
+            let db = null;
+            try {
+                if (typeof firebase === 'undefined') {
+                    throw new Error('Firebase library not loaded');
+                }
+                firebaseApp = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                db = firebase.database();
+                console.log('Firebase initialized successfully at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+            } catch (error) {
+                console.error('Firebase initialization error:', error.message);
+                alert('Failed to initialize Firebase. Check console for details.');
+                return;
+            }
+
+            let userId = null;
+            let passengerName = '';
+            let userRole = 'Passenger';
+
+            // User profile functions
+            function updateUserProfile(name, role) {
+                const userNameElement = document.getElementById('user-name');
+                const userRoleElement = document.getElementById('user-role');
+                const userAvatarElement = document.getElementById('user-avatar');
+
+                if (userNameElement) userNameElement.textContent = name;
+                if (userRoleElement) userRoleElement.textContent = role;
+                if (userAvatarElement) userAvatarElement.textContent = name.charAt(0).toUpperCase();
+            }
+
+            async function loadUserData() {
+                if (!userId || !db) {
+                    console.warn('User not authenticated or database not initialized');
+                    return;
+                }
+
+                try {
+                    const userSnapshot = await db.ref(`users/${userId}`).once('value');
+                    const userData = userSnapshot.val();
+
+                    if (userData) {
+                        passengerName = userData.name || userData.firstName + ' ' + userData.lastName || passengerName;
+                        userRole = userData.role || userRole;
+
+                        // Update localStorage with fresh data
+                        localStorage.setItem('userName', passengerName);
+                        localStorage.setItem('userRole', userRole);
+
+                        // Update UI with fresh data
+                        updateUserProfile(passengerName, userRole);
+                    }
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                }
+            }
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log('User logged in:', userId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+
+                    // Load user data from localStorage first (for immediate display)
+                    passengerName = localStorage.getItem('userName') || 'Loading...';
+                    userRole = localStorage.getItem('userRole') || 'Passenger';
+
+                    // Update UI immediately
+                    updateUserProfile(passengerName, userRole);
+
+                    // Then load fresh data from database
+                    await loadUserData();
+
+                    db.ref(`users/${userId}`).once('value').then(snapshot => {
+                        const userData = snapshot.val() || {};
+                        const fullName = `${userData.firstName || 'User'} ${userData.lastName || ''}`.trim();
+                        passengerName = userData.name || fullName || passengerName;
+
+                        // Load wallet balance
+                        db.ref(`passengers/${userId}/wallet`).once('value').then(walletSnapshot => {
+                            const walletBalance = walletSnapshot.val() || 245.50;
+                            document.getElementById('wallet-balance').textContent = `R ${walletBalance.toFixed(2)}`;
+                        }).catch(error => console.error('Error fetching wallet data:', error));
+                    }).catch(error => console.error('Error fetching user data:', error));
+
+                    // Load recent rides
+                    db.ref(`passengers/${userId}/rides`).once('value').then(ridesSnapshot => {
+                        const rides = ridesSnapshot.val() || {};
+                        const rideList = document.querySelectorAll('#passenger-app .list-item');
+                        Object.entries(rides).slice(0, 3).forEach(([id, ride], index) => {
+                            if (rideList[index]) {
+                                rideList[index].querySelector('h4').textContent = ride.route || 'Unknown Route';
+                                rideList[index].querySelector('p').textContent = ride.date || 'N/A';
+                                rideList[index].querySelector('.item-value').textContent = `R ${ride.cost || 0.00}`;
+                            }
+                        });
+                    }).catch(error => console.error('Error fetching rides data:', error));
+                } else {
+                    userId = null;
+                    passengerName = '';
+                    userRole = 'Passenger';
+                    console.log('No user logged in at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                    updateUserProfile('Loading...', 'Passenger');
+                    window.location.href = 'login.html';
+                }
+            });
+
+            document.getElementById('add-money-btn')?.addEventListener('click', () => {
+                console.log('Add Money button clicked');
+                openModal('add-money-modal');
+            });
+
+            document.getElementById('send-money-btn')?.addEventListener('click', () => {
+                console.log('Send Money button clicked');
+                openModal('send-money-modal');
+            });
+
+            document.getElementById('scan-qr-btn')?.addEventListener('click', () => {
+                console.log('Scan QR button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                // Placeholder for QR scan logic
+            });
+
+            document.getElementById('view-routes-btn')?.addEventListener('click', () => {
+                console.log('View Routes button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                // Placeholder for view routes logic
+            });
+
+            document.getElementById('view-history-btn')?.addEventListener('click', () => {
+                console.log('View History button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                // Placeholder for view history logic
+            });
+
+            document.getElementById('support-btn')?.addEventListener('click', () => {
+                console.log('Support button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                // Placeholder for support logic
+            });
+
+            document.getElementById('simulate-scan')?.addEventListener('click', () => {
+                console.log('Simulate Scan button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                // Placeholder for simulate scan logic
+            });
+
+            // Placeholder for map initialization (e.g., Google Maps API)
+            console.log('Map container initialized at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+            // Add map initialization code here if using a mapping library
+
+            // Logout button
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    try {
+                        await auth.signOut();
+                        localStorage.clear();
+                        console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        alert('Logged out successfully!');
+                        window.location.href = 'login.html';
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                        alert('Error logging out: ' + error.message);
+                    }
+                });
+            }
+
+            // Notifications button
+            const notificationsBtn = document.getElementById('notifications-btn');
+            if (notificationsBtn) {
+                notificationsBtn.addEventListener('click', () => {
+                    console.log('Notifications clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                    alert('Notifications feature coming soon!');
+                });
+            }
+
+            // User profile click
+            const userProfile = document.getElementById('user-profile');
+            if (userProfile) {
+                userProfile.addEventListener('click', () => {
+                    console.log('User profile clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                    alert(`Profile: ${passengerName}\nRole: ${userRole}\nEmail: ${localStorage.getItem('userEmail') || 'N/A'}`);
+                });
+            }
+
+            document.querySelector('.panic-button')?.addEventListener('click', () => {
+                console.log('Panic button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                // Placeholder for panic button logic
+            });
+
+            const navItems = document.querySelectorAll('.nav-item');
+            if (navItems.length > 0) {
+                navItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        document.querySelector('.nav-item.active')?.classList.remove('active');
+                        item.classList.add('active');
+                        const nav = item.getAttribute('data-nav');
+                        console.log('Navigated to:', nav, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        // Add navigation logic here (e.g., show/hide sections)
+                    });
+                });
+            }
+
+            // Payment method change
+            document.getElementById('payment-method')?.addEventListener('change', (e) => {
+                const voucherGroup = document.getElementById('voucher-code-group');
+                if (e.target.value === 'voucher') {
+                    voucherGroup.style.display = 'block';
+                } else {
+                    voucherGroup.style.display = 'none';
+                }
+            });
+
+            // Add money form
+            document.getElementById('add-money-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const amount = parseFloat(document.getElementById('add-money-amount').value);
+                const method = document.getElementById('payment-method').value;
+                if (amount > 0 && method) {
+                    try {
+                        const currentBalance = parseFloat(document.getElementById('wallet-balance').textContent.replace('R ', ''));
+                        const newBalance = currentBalance + amount;
+                        await db?.ref(`passengers/${userId}/wallet`).set(newBalance);
+                        document.getElementById('wallet-balance').textContent = `R ${newBalance.toFixed(2)}`;
+                        console.log('Added money:', amount, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        closeModal('add-money-modal');
+                        alert('Money added successfully!');
+                    } catch (error) {
+                        console.error('Error adding money:', error.message);
+                        alert('Failed to add money. Check console for details.');
+                    }
+                } else {
+                    alert('Please enter a valid amount and select a payment method.');
+                }
+            });
+
+            // Send money form
+            document.getElementById('send-money-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const recipientId = document.getElementById('recipient-id').value.trim();
+                const amount = parseFloat(document.getElementById('send-money-amount').value);
+                if (recipientId && amount > 0) {
+                    try {
+                        const currentBalance = parseFloat(document.getElementById('wallet-balance').textContent.replace('R ', ''));
+                        if (currentBalance >= amount) {
+                            const newBalance = currentBalance - amount;
+                            await db?.ref(`passengers/${userId}/wallet`).set(newBalance);
+                            document.getElementById('wallet-balance').textContent = `R ${newBalance.toFixed(2)}`;
+                            // Note: In a real app, you'd update the recipient's balance too
+                            console.log('Sent money:', amount, 'to', recipientId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                            closeModal('send-money-modal');
+                            alert('Money sent successfully!');
+                        } else {
+                            alert('Insufficient balance.');
+                        }
+                    } catch (error) {
+                        console.error('Error sending money:', error.message);
+                        alert('Failed to send money. Check console for details.');
+                    }
+                } else {
+                    alert('Please enter a valid recipient ID and amount.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

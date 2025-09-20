@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>TaxiDrive - Driver</title>
+    <!-- Cordova/Capacitor Setup Instructions
+         1. Initialize a Cordova project: `cordova create taxidrive-driver com.taxidrive.driver TaxiDriveDriver`
+         2. Add platforms: `cordova platform add android`
+         3. Add plugins: `cordova plugin add cordova-plugin-geolocation cordova-plugin-camera`
+         4. Place this file in the `www` folder
+         5. Update `config.xml` with permissions: `<access origin="*" />` and `<allow-navigation href="*" />`
+         6. Build APK: `cordova build android`
+         7. For Capacitor, use: `npx cap init`, add this file to `public`, and run `npx cap sync`
+    -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        :root {
+            --dark-blue: #1A2A44;
+            --light-blue: #A3C9E6;
+            --white: #FFFFFF;
+            --gray: #D3D3D3;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: var(--white);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            overflow-x: hidden;
+        }
+        header {
+            background-color: var(--dark-blue);
+            color: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .user-profile:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        .user-role {
+            font-size: 11px;
+            opacity: 0.8;
+            line-height: 1.2;
+        }
+        .header-icons i {
+            margin-left: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        .header-icons i:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .app-content {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--dark-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title .view-all {
+            font-size: 12px;
+            color: var(--light-blue);
+            font-weight: 500;
+        }
+        .card {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray);
+        }
+        .wallet-balance {
+            background: linear-gradient(135deg, var(--dark-blue), #2a3b5c);
+            color: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        .balance-amount {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        .wallet-actions {
+            display: flex;
+            justify-content: space-between;
+        }
+        .wallet-btn {
+            background-color: var(--light-blue);
+            color: var(--dark-blue);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 0.48;
+            text-align: center;
+        }
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .action-btn {
+            background-color: var(--white);
+            border: 1px solid var(--gray);
+            border-radius: 10px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        }
+        .action-btn i {
+            font-size: 24px;
+            color: var(--dark-blue);
+            margin-bottom: 8px;
+        }
+        .action-btn span {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--dark-blue);
+        }
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray);
+        }
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        .item-info {
+            display: flex;
+            align-items: center;
+        }
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        .item-icon i {
+            color: var(--dark-blue);
+        }
+        .item-details h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        .item-details p {
+            font-size: 12px;
+            color: #666;
+        }
+        .item-value {
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        .btn {
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background-color: var(--dark-blue);
+            color: var(--white);
+        }
+        .btn-secondary {
+            background-color: var(--white);
+            color: var(--dark-blue);
+            border: 1px solid var(--gray);
+        }
+        .btn-success {
+            background-color: var(--success);
+            color: var(--white);
+        }
+        .btn-danger {
+            background-color: var(--danger);
+            color: var(--white);
+        }
+        .map-container {
+            height: 450px;
+            background-color: #eee;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .panic-button {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: var(--danger);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--white);
+            padding: 12px 0;
+            border-top: 1px solid var(--gray);
+        }
+        .nav-item {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .nav-item.active {
+            color: var(--dark-blue);
+            position: relative;
+        }
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background-color: var(--dark-blue);
+            border-radius: 50%;
+        }
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        @keyframes successCheckmark {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .success-animation {
+            text-align: center;
+            padding: 20px;
+        }
+        .success-checkmark {
+            font-size: 60px;
+            color: var(--success);
+            animation: successCheckmark 0.5s ease-in-out;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark-blue);
+            margin-bottom: 5px;
+            display: block;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .login-logout-btn {
+            background-color: var(--light-blue);
+            color: var(--dark-blue);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+        .duty-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .duty-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .duty-btn.active {
+            background-color: var(--success);
+            color: var(--white);
+        }
+        .duty-btn.inactive {
+            background-color: var(--danger);
+            color: var(--white);
+        }
+    </style>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="Logo1.png" alt="TaxiDrive Logo" style="height: 60px; width: auto;">
+                <h1>TaxiDrive</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-profile" id="user-profile">
+                    <div class="user-avatar" id="user-avatar">D</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name">Loading...</div>
+                        <div class="user-role" id="user-role">Driver</div>
+                    </div>
+                </div>
+                <div class="header-icons">
+                    <i class="fas fa-bell" id="notifications-btn"></i>
+                    <i class="fas fa-sign-out-alt" id="logout-btn"></i>
+                </div>
+            </div>
+        </header>
+        <div class="app-content" id="driver-app">
+            <div class="wallet-balance">
+                <div class="balance-label">Your Earnings</div>
+                <div class="balance-amount" id="wallet-balance">R 0.00</div>
+                <div class="duty-toggle">
+                    <button class="duty-btn" id="duty-on-btn" data-status="on">Duty On</button>
+                    <button class="duty-btn" id="duty-off-btn" data-status="off">Duty Off</button>
+                </div>
+            </div>
+            <div class="section-title">Quick Actions</div>
+            <div class="quick-actions">
+                <div class="action-btn" id="scan-qr-btn">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Scan QR</span>
+                </div>
+                <div class="action-btn" id="earnings-history-btn">
+                    <i class="fas fa-history"></i>
+                    <span>Earnings</span>
+                </div>
+                <div class="action-btn" id="view-routes-btn">
+                    <i class="fas fa-route"></i>
+                    <span>Route</span>
+                </div>
+            </div>
+            <div class="section-title">Current Route</div>
+            <div class="card">
+                <div class="list-item">
+                    <div class="item-info">
+                        <div class="item-icon"><i class="fas fa-route"></i></div>
+                        <div class="item-details">
+                            <h4 id="current-route">Soweto to Johannesburg</h4>
+                            <p>Toyota HiACE (ABC 123 EC)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title">Recent Earnings <span class="view-all" id="earnings-history-btn">View All</span></div>
+            <div class="card" id="recent-earnings"></div>
+            <div class="section-title">Your Location <span class="view-all">View Map</span></div>
+            <div class="map-container">
+                <div id="driverMap" style="height: 100%;"></div>
+            </div>
+            <div class="panic-button" id="driver-panic-btn">
+                <i class="fas fa-exclamation"></i>
+            </div>
+        </div>
+        <div class="bottom-nav">
+            <div class="nav-item active" data-nav="home">
+                <i class="fas fa-home"></i>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" data-nav="map">
+                <i class="fas fa-map-marker-alt"></i>
+                <div>Map</div>
+            </div>
+            <div class="nav-item" data-nav="earnings">
+                <i class="fas fa-wallet"></i>
+                <div>Earnings</div>
+            </div>
+            <div class="nav-item" data-nav="profile">
+                <i class="fas fa-user"></i>
+                <div>Profile</div>
+            </div>
+        </div>
+        <div class="modal" id="qr-scanner-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Scan Passenger QR</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <p>Simulate scanning a passenger QR code</p>
+                    <button class="btn btn-primary" id="simulate-scan">Scan</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="payment-details-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Passenger Payment</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="card">
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-icon"><i class="fas fa-taxi"></i></div>
+                            <div class="item-details">
+                                <h4>Soweto to Johannesburg</h4>
+                                <p>Passenger: <span id="passenger-email">passenger@example.com</span></p>
+                            </div>
+                        </div>
+                        <div class="item-value">R <span id="current-fare">35.00</span></div>
+                    </div>
+                    <button class="btn btn-primary" id="confirm-payment">Confirm Payment</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="payment-success-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Payment Received</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <div class="success-checkmark">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Payment Completed!</h3>
+                    <p>Received R <span id="payment-amount">35.00</span> from passenger.</p>
+                </div>
+                <button class="btn btn-primary" id="payment-ok-btn">OK</button>
+            </div>
+        </div>
+        <div class="modal" id="route-map-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Route Map</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div id="routeMap"></div>
+            </div>
+        </div>
+        <div class="modal" id="earnings-history-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Earnings History</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Period</label>
+                    <select class="form-input" id="earnings-period">
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="card" id="earnings-list"></div>
+                <div class="section-title">Total: R <span id="earnings-total">0.00</span></div>
+            </div>
+        </div>
+        <div class="modal" id="panic-confirmation-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Emergency Alert</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <p>Are you sure you want to trigger the emergency alert?</p>
+                    <button class="btn btn-danger" id="confirm-panic-btn">Yes, Alert</button>
+                    <button class="btn btn-secondary" id="cancel-panic-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="panic-success-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Alert Sent</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="success-animation">
+                    <div class="success-checkmark">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3>Emergency Alert Activated!</h3>
+                    <p>Authorities have been notified.</p>
+                </div>
+                <button class="btn btn-primary" id="panic-ok-btn">OK</button>
+            </div>
+        </div>
+        <div class="modal" id="login-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Login / Sign Up</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-input" id="signup-name" placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" id="login-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="login-password" placeholder="Enter your password">
+                </div>
+                <button class="btn btn-primary" id="signup-btn">Sign Up</button>
+                <button class="btn btn-secondary" id="login-btn">Login</button>
+                <div class="divider">
+                    <span>Or login with</span>
+                </div>
+                <button class="btn btn-google">
+                    <i class="fab fa-google"></i> Google
+                </button>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal" id="confirmation-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title" id="confirmation-title">Confirmation</div>
+                    <div class="modal-close" id="confirmation-close">&times;</div>
+                </div>
+                <div class="success-animation" id="confirmation-message" style="padding: 20px; font-size: 16px; color: var(--dark-blue);">
+                </div>
+                <button class="btn btn-primary" id="confirmation-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDF4QoPKP02tFadu2pOVlcZRXaA5NcpmY0",
+  authDomain: "taxidrive-337a3.firebaseapp.com",
+  databaseURL: "https://taxidrive-337a3-default-rtdb.firebaseio.com",
+  projectId: "taxidrive-337a3",
+  storageBucket: "taxidrive-337a3.firebasestorage.app",
+  messagingSenderId: "715498763019",
+  appId: "1:715498763019:web:b9fb152a7d5411ebba680e",
+  measurementId: "G-NB9PMBD7DQ"
+};
+
+// Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // Initialize variables
+        let walletBalance = 0;
+        let currentFare = 35.00;
+        let driverMap, routeMap;
+        let isLoggedIn = false;
+        let userId = null;
+        let dutyStatus = 'off';
+        let driverName = '';
+        let userRole = 'Driver';
+        let todaysEarnings = 0;
+
+        // User profile functions
+        function updateUserProfile(name, role) {
+            const userNameElement = document.getElementById('user-name');
+            const userRoleElement = document.getElementById('user-role');
+            const userAvatarElement = document.getElementById('user-avatar');
+
+            if (userNameElement) userNameElement.textContent = name;
+            if (userRoleElement) userRoleElement.textContent = role;
+            if (userAvatarElement) userAvatarElement.textContent = name.charAt(0).toUpperCase();
+        }
+
+        async function loadUserData() {
+            if (!userId || !db) {
+                console.warn('User not authenticated or database not initialized');
+                return;
+            }
+
+            try {
+                const userSnapshot = await db.ref(`users/${userId}`).once('value');
+                const userData = userSnapshot.val();
+
+                if (userData) {
+                    driverName = userData.name || driverName;
+                    userRole = userData.role || userRole;
+
+                    // Update localStorage with fresh data
+                    localStorage.setItem('userName', driverName);
+                    localStorage.setItem('userRole', userRole);
+
+                    // Update UI with fresh data
+                    updateUserProfile(driverName, userRole);
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // Initialize maps
+        function initMaps() {
+            driverMap = L.map('driverMap').setView([-26.2041, 28.0473], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(driverMap);
+            L.marker([-26.2041, 28.0473]).addTo(driverMap).bindPopup('Your location').openPopup();
+
+            routeMap = L.map('routeMap').setView([-26.2041, 28.0473], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(routeMap);
+            const routeCoordinates = [[-26.267, 27.858], [-26.2041, 28.0473]];
+            L.polyline(routeCoordinates, {color: 'blue'}).addTo(routeMap);
+            L.marker(routeCoordinates[0]).addTo(routeMap).bindPopup('Soweto');
+            L.marker(routeCoordinates[1]).addTo(routeMap).bindPopup('Johannesburg');
+        }
+
+        // Update earnings history
+        function updateEarningsHistory(period = 'daily') {
+            if (!userId) return;
+            const earningsList = document.getElementById('earnings-list');
+            const recentEarnings = document.getElementById('recent-earnings');
+            earningsList.innerHTML = '';
+            recentEarnings.innerHTML = '';
+            let total = 0;
+            const now = new Date();
+            const startDate = period === 'daily' ? new Date(now.setHours(0, 0, 0, 0)) :
+                             period === 'weekly' ? new Date(now.setDate(now.getDate() - 7)) :
+                             new Date(now.setDate(now.getDate() - 30));
+            db.ref(`users/drivers/${userId}/earnings`).once('value', snapshot => {
+                const earnings = snapshot.val() || [];
+                Object.values(earnings).forEach(earning => {
+                    const earningDate = new Date(earning.time);
+                    if (earningDate >= startDate) {
+                        total += earning.amount;
+                        const earningHtml = `
+                            <div class="list-item">
+                                <div class="item-info">
+                                    <div class="item-icon"><i class="fas fa-money-bill"></i></div>
+                                    <div class="item-details">
+                                        <h4>${earning.route}</h4>
+                                        <p>${earning.passenger} - ${earning.time}</p>
+                                    </div>
+                                </div>
+                                <div class="item-value">R ${earning.amount.toFixed(2)}</div>
+                            </div>`;
+                        earningsList.innerHTML += earningHtml;
+                        if (period === 'daily') recentEarnings.innerHTML += earningHtml;
+                    }
+                });
+                document.getElementById('earnings-total').textContent = total.toFixed(2);
+            }).catch(error => {
+                alert('Error loading earnings: ' + error.message);
+            });
+        }
+
+        // Update duty status
+        function updateDutyStatus(status) {
+            if (!userId) return;
+            dutyStatus = status;
+            db.ref(`users/drivers/${userId}/dutyStatus`).set(status).then(() => {
+                document.getElementById('duty-on-btn').classList.toggle('active', status === 'on');
+                document.getElementById('duty-on-btn').classList.toggle('inactive', status !== 'on');
+                document.getElementById('duty-off-btn').classList.toggle('active', status === 'off');
+                document.getElementById('duty-off-btn').classList.toggle('inactive', status !== 'off');
+            }).catch(error => {
+                alert('Error updating duty status: ' + error.message);
+            });
+        }
+
+        // Calculate today's earnings
+        function calculateTodaysEarnings() {
+            if (!userId) return;
+            const today = new Date();
+            const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            db.ref(`users/drivers/${userId}/earnings`).once('value', snapshot => {
+                const earnings = snapshot.val() || {};
+                todaysEarnings = 0;
+                Object.values(earnings).forEach(earning => {
+                    const earningDate = new Date(earning.time);
+                    if (earningDate >= startOfDay) {
+                        todaysEarnings += earning.amount;
+                    }
+                });
+                document.getElementById('wallet-balance').textContent = `R ${todaysEarnings.toFixed(2)}`;
+            }).catch(error => {
+                console.error('Error calculating today\'s earnings: ' + error.message);
+            });
+        }
+
+        // Modal functionality
+        const modals = document.querySelectorAll('.modal');
+        const closeModalButtons = document.querySelectorAll('.modal-close');
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                button.closest('.modal').style.display = 'none';
+            });
+        });
+
+        modals.forEach(modal => {
+            modal.addEventListener('click', e => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+
+        // Bottom navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                const navAction = item.dataset.nav;
+                if (navAction === 'home') {
+                    window.scrollTo(0, 0);
+                } else if (navAction === 'map') {
+                    openModal('route-map-modal');
+                } else if (navAction === 'earnings') {
+                    updateEarningsHistory();
+                    openModal('earnings-history-modal');
+                } else if (navAction === 'profile') {
+                    openModal('login-modal');
+                }
+            });
+        });
+
+        // Duty toggle
+        document.getElementById('duty-on-btn').addEventListener('click', () => {
+            updateDutyStatus('on');
+        });
+
+        document.getElementById('duty-off-btn').addEventListener('click', () => {
+            updateDutyStatus('off');
+        });
+
+        // Scan QR
+        document.getElementById('scan-qr-btn').addEventListener('click', () => {
+            openModal('qr-scanner-modal');
+        });
+
+        document.getElementById('simulate-scan').addEventListener('click', () => {
+            closeModal('qr-scanner-modal');
+            openModal('payment-details-modal');
+        });
+
+        // Confirm payment
+        document.getElementById('confirm-payment').addEventListener('click', () => {
+            if (dutyStatus !== 'on') {
+                alert('Please set Duty On to accept payments');
+                return;
+            }
+            db.ref(`users/drivers/${userId}/walletBalance`).transaction(balance => {
+                return (balance || 0) + currentFare;
+            }, (error, committed) => {
+                if (error || !committed) {
+                    alert('Error processing payment: ' + (error ? error.message : 'Transaction failed'));
+                    return;
+                }
+                walletBalance += currentFare;
+                db.ref(`users/drivers/${userId}/earnings`).push({
+                passenger: document.getElementById('passenger-email').textContent,
+                route: 'Soweto to Johannesburg',
+                time: new Date().toLocaleString(),
+                amount: currentFare,
+                driver: userId,
+                vehicle: 'Hi-Ace (ABC123GP)'
+            });
+                db.ref(`users/drivers/${userId}/vehicle/ownerId`).once('value', snapshot => {
+                    const ownerId = snapshot.val();
+                    if (ownerId) {
+                        db.ref(`users/owners/${ownerId}/earnings`).push({
+                            vehicle: 'Hi-ACE (ABC123GP)',
+                            time: new Date().toLocaleString(),
+                            amount: currentFare,
+                            driver: driverName
+                        });
+                    }
+                });
+                todaysEarnings += currentFare;
+                document.getElementById('wallet-balance').textContent = `R ${todaysEarnings.toFixed(2)}`;
+                document.getElementById('payment-amount').textContent = currentFare.toFixed(2);
+                updateEarningsHistory();
+                closeModal('payment-details-modal');
+                openModal('payment-success-modal');
+            });
+        });
+
+        document.getElementById('payment-ok-btn').addEventListener('click', () => {
+            closeModal('payment-success-modal');
+        });
+
+        // View routes
+        document.getElementById('view-routes-btn').addEventListener('click', () => {
+            openModal('route-map-modal');
+        });
+
+        // Earnings history
+        document.getElementById('earnings-history-btn').addEventListener('click', () => {
+            updateEarningsHistory();
+            openModal('earnings-history-modal');
+        });
+
+        document.getElementById('earnings-period').addEventListener('change', (e) => {
+            updateEarningsHistory(e.target.value);
+        });
+
+        // Panic button
+        document.getElementById('driver-panic-btn').addEventListener('click', () => {
+            openModal('panic-confirmation-modal');
+        });
+
+        document.getElementById('confirm-panic-btn').addEventListener('click', () => {
+            closeModal('panic-confirmation-modal');
+            openModal('panic-success-modal');
+        });
+
+        document.getElementById('cancel-panic-btn').addEventListener('click', () => {
+            closeModal('panic-confirmation-modal');
+        });
+
+        document.getElementById('panic-ok-btn').addEventListener('click', () => {
+            closeModal('panic-success-modal');
+        });
+
+        // Authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                isLoggedIn = true;
+                userId = user.uid;
+                console.log('User logged in:', userId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+
+                // Load user data from localStorage first (for immediate display)
+                driverName = localStorage.getItem('userName') || 'Loading...';
+                userRole = localStorage.getItem('userRole') || 'Driver';
+
+                // Update UI immediately
+                updateUserProfile(driverName, userRole);
+
+                // Then load fresh data from database
+                await loadUserData();
+
+                // Load driver-specific data
+                db.ref(`users/drivers/${userId}`).once('value', snapshot => {
+                    const data = snapshot.val();
+                    walletBalance = data?.walletBalance || 0;
+                    dutyStatus = data?.dutyStatus || 'off';
+                    driverName = data?.name || driverName;
+                    updateDutyStatus(dutyStatus);
+
+                    // Fetch owner vehicle info and update current route vehicle display
+                    const ownerId = data?.vehicle?.ownerId;
+                    if (ownerId) {
+                        db.ref(`users/owners/${ownerId}/vehicle`).once('value', snapshot => {
+                            const vehicleData = snapshot.val();
+                            if (vehicleData) {
+                                const vehicleDesc = `${vehicleData.model} (${vehicleData.reg})`;
+                                const currentRouteVehicleElem = document.querySelector('.section-title + .card .item-details p');
+                                if (currentRouteVehicleElem) {
+                                    currentRouteVehicleElem.textContent = vehicleDesc;
+                                }
+                            }
+                        });
+                    }
+
+                    if (!data) {
+                        db.ref(`users/drivers/${userId}`).set({
+                            email: user.email,
+                            name: document.getElementById('signup-name').value || 'Driver',
+                            role: 'Driver',
+                            walletBalance: 0,
+                            dutyStatus: 'off',
+                            vehicle: {
+                                model: 'Toyota HiACE',
+                                reg: 'ABC 123 EC',
+                                ownerId: 'owner1'
+                            }
+                        });
+                    }
+                    updateEarningsHistory();
+                    calculateTodaysEarnings();
+                });
+            } else {
+                isLoggedIn = false;
+                userId = null;
+                walletBalance = 0;
+                dutyStatus = 'off';
+                driverName = '';
+                userRole = 'Driver';
+                todaysEarnings = 0;
+                document.getElementById('wallet-balance').textContent = 'R 0.00';
+                updateUserProfile('Loading...', 'Driver');
+                console.log('No user logged in at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+            }
+        });
+
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await auth.signOut();
+                    localStorage.clear();
+                    console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                    showConfirmationModal('Logout Successful', 'You have been logged out successfully!');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    showConfirmationModal('Logout Error', 'Error logging out: ' + error.message);
+                }
+            });
+        }
+
+        // Notifications button
+        const notificationsBtn = document.getElementById('notifications-btn');
+        if (notificationsBtn) {
+            notificationsBtn.addEventListener('click', () => {
+                console.log('Notifications clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                alert('Notifications feature coming soon!');
+            });
+        }
+
+        // User profile click
+        const userProfile = document.getElementById('user-profile');
+        if (userProfile) {
+            userProfile.addEventListener('click', () => {
+                console.log('User profile clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                alert(`Profile: ${driverName}\nRole: ${userRole}\nEmail: ${localStorage.getItem('userEmail') || 'N/A'}`);
+            });
+        }
+
+        // Confirmation modal logic
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const confirmationTitle = document.getElementById('confirmation-title');
+        const confirmationMessage = document.getElementById('confirmation-message');
+        const confirmationClose = document.getElementById('confirmation-close');
+        const confirmationOkBtn = document.getElementById('confirmation-ok-btn');
+
+        function showConfirmationModal(title, message) {
+            confirmationTitle.textContent = title;
+            confirmationMessage.textContent = message;
+            confirmationModal.style.display = 'flex';
+        }
+
+        confirmationClose.addEventListener('click', () => {
+            confirmationModal.style.display = 'none';
+        });
+
+        confirmationOkBtn.addEventListener('click', () => {
+            confirmationModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === confirmationModal) {
+                confirmationModal.style.display = 'none';
+            }
+        });
+
+        document.getElementById('signup-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const name = document.getElementById('signup-name').value;
+            if (email && password && name) {
+                auth.createUserWithEmailAndPassword(email, password).then(userCredential => {
+                    db.ref(`users/drivers/${userCredential.user.uid}`).set({
+                        email: email,
+                        name: name,
+                        role: 'Driver',
+                        walletBalance: 0,
+                        dutyStatus: 'off',
+                        vehicle: {
+                            model: 'Toyota HiACE',
+                            reg: 'ABC 123 EC',
+                            ownerId: 'owner1'
+                        }
+                    });
+                    // Store user data in localStorage
+                    localStorage.setItem('userName', name);
+                    localStorage.setItem('userRole', 'Driver');
+                    localStorage.setItem('userEmail', email);
+                    closeModal('login-modal');
+                    alert('Signed up successfully!');
+                }).catch(error => {
+                    alert('Error signing up: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if (email && password) {
+                auth.signInWithEmailAndPassword(email, password).then(() => {
+                    // Store user data in localStorage
+                    localStorage.setItem('userEmail', email);
+                    closeModal('login-modal');
+                    alert('Logged in successfully!');
+                }).catch(error => {
+                    alert('Error logging in: ' + error.message);
+                });
+            } else {
+                alert('Please enter email and password');
+            }
+        });
+
+        document.querySelector('.btn-google').addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then(result => {
+                const user = result.user;
+                const userName = user.displayName || 'Driver';
+                const userEmail = user.email;
+
+                db.ref(`users/drivers/${user.uid}`).once('value', snapshot => {
+                    if (!snapshot.exists()) {
+                        db.ref(`users/drivers/${user.uid}`).set({
+                            email: userEmail,
+                            name: userName,
+                            role: 'Driver',
+                            walletBalance: 0,
+                            dutyStatus: 'off',
+                            vehicle: {
+                                model: 'Toyota HiACE',
+                                reg: 'ABC 123 EC',
+                                ownerId: 'owner1'
+                            }
+                        });
+                    }
+                    // Store user data in localStorage
+                    localStorage.setItem('userName', userName);
+                    localStorage.setItem('userRole', 'Driver');
+                    localStorage.setItem('userEmail', userEmail);
+                    closeModal('login-modal');
+                    alert('Logged in with Google!');
+                });
+            }).catch(error => {
+                alert('Error logging in with Google: ' + error.message);
+            });
+        });
+
+        // Initialize application
+        window.onload = function() {
+            initMaps();
+        };
+    </script>
+</body>
+</html>
