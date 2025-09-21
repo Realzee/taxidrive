@@ -54,8 +54,9 @@ function initApp() {
         const now = new Date();
         const expiryThreshold = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000); // 60 days from now
 
-        db.ref(`owners/${userId}/drivers`).once('value', snapshot => {
-            const drivers = snapshot.val() || {};
+        // Use reactive listener for drivers data
+        firebaseService.onOwnerDriversChange(userId, (drivers) => {
+            drivers = drivers || {};
             Object.entries(drivers).forEach(([driverId, driver]) => {
                 if (driver.licenceExpiry) {
                     const licenceExpiryDate = new Date(driver.licenceExpiry);
