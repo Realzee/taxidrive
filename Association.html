@@ -573,24 +573,17 @@
             </div>
             
             <!-- Member Registration -->
-            <div class="section-title">Member Registration <span class="view-all" id="view-members">View All</span></div>
+            <div class="section-title">Member Approval <span class="view-all" id="view-members">View All</span></div>
             <div class="card" id="member-card">
                 <div class="form-group">
                     <label class="form-label">Bulk Upload Members</label>
                     <input type="file" class="form-input" id="bulk-upload-input">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Verification Status</label>
-                    <div class="list-item">
-                        <div class="item-info">
-                            <div class="item-details">
-                                <h4>Pending Verifications</h4>
-                                <p>7 drivers, 3 vehicles need approval</p>
-                            </div>
-                        </div>
-                        <div class="item-value">
-                            <span class="status-indicator status-pending">10</span>
-                        </div>
+                    <label class="form-label">Pending Member Approvals</label>
+                    <div id="pending-members-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--gray); border-radius: 8px; padding: 10px;">
+                        <!-- Pending members will be dynamically loaded here -->
+                        <p style="color: #666; font-size: 14px;">Loading pending members...</p>
                     </div>
                 </div>
                 <div class="add-remove-buttons">
@@ -604,6 +597,27 @@
                 <button class="btn btn-primary" id="start-verification-btn">
                     <i class="fas fa-user-check"></i> Start Verification
                 </button>
+            </div>
+
+            <!-- Member Document Modal -->
+            <div id="member-documents-modal" class="modal">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Member Documents</h2>
+                        <span class="modal-close" onclick="closeModal('member-documents-modal')">&times;</span>
+                    </div>
+                    <div id="member-documents-content" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Documents will be dynamically loaded here -->
+                    </div>
+                    <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+                        <button class="btn btn-primary" id="approve-member-btn">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-danger" id="reject-member-btn">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- Dispute Resolution -->
@@ -1730,6 +1744,123 @@
                 }
             });
         });
-    </script>
+            </script>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const pendingMembersList = document.getElementById('pending-members-list');
+                    const memberDocumentsModal = document.getElementById('member-documents-modal');
+                    const memberDocumentsContent = document.getElementById('member-documents-content');
+                    const approveMemberBtn = document.getElementById('approve-member-btn');
+                    const rejectMemberBtn = document.getElementById('reject-member-btn');
+
+                    let selectedMemberId = null;
+
+                    async function loadPendingMembers() {
+                        try {
+                            const members = await enhancedFirebaseService.fetchPendingMembers();
+                            renderPendingMembers(members);
+                        } catch (error) {
+                            console.error('Error loading pending members:', error);
+                            pendingMembersList.innerHTML = '<p style="color: red;">Failed to load pending members.</p>';
+                        }
+                    }
+
+                    function renderPendingMembers(members) {
+                        if (!members || Object.keys(members).length === 0) {
+                            pendingMembersList.innerHTML = '<p style="color: #666; font-size: 14px;">No pending members found.</p>';
+                            return;
+                        }
+
+                        pendingMembersList.innerHTML = '';
+
+                        Object.entries(members).forEach(([memberId, member]) => {
+                            const memberItem = document.createElement('div');
+                            memberItem.className = 'list-item';
+                            memberItem.style.cursor = 'pointer';
+                            memberItem.style.padding = '10px';
+                            memberItem.style.borderBottom = '1px solid var(--gray)';
+                            memberItem.innerHTML = `
+                                <div class="item-info">
+                                    <div class="item-details">
+                                        <h4>${member.name || 'Unnamed Member'}</h4>
+                                        <p>Email: ${member.email || 'N/A'}</p>
+                                        <p>Status: <span class="status-indicator status-pending">Pending</span></p>
+                                    </div>
+                                </div>
+                                <div class="item-value">
+                                    <button class="btn btn-primary btn-sm view-docs-btn" data-member-id="${memberId}">
+                                        <i class="fas fa-file-alt"></i> View Documents
+                                    </button>
+                                </div>
+                            `;
+                            pendingMembersList.appendChild(memberItem);
+                        });
+
+                        // Add event listeners for view documents buttons
+                        const viewDocsButtons = pendingMembersList.querySelectorAll('.view-docs-btn');
+                        viewDocsButtons.forEach(button => {
+                            button.addEventListener('click', async (e) => {
+                                e.stopPropagation();
+                                selectedMemberId = button.getAttribute('data-member-id');
+                                await loadMemberDocuments(selectedMemberId);
+                                openModal('member-documents-modal');
+                            });
+                        });
+                    }
+
+                    async function loadMemberDocuments(memberId) {
+                        memberDocumentsContent.innerHTML = '<p>Loading documents...</p>';
+                        try {
+                            const documents = await enhancedFirebaseService.fetchMemberDocuments(memberId);
+                            if (!documents || Object.keys(documents).length === 0) {
+                                memberDocumentsContent.innerHTML = '<p>No documents found for this member.</p>';
+                                return;
+                            }
+                            memberDocumentsContent.innerHTML = '';
+                            Object.entries(documents).forEach(([docId, doc]) => {
+                                const docElement = document.createElement('div');
+                                docElement.style.marginBottom = '10px';
+                                docElement.innerHTML = `
+                                    <h5>${doc.title || 'Document'}</h5>
+                                    <a href="${doc.url}" target="_blank" rel="noopener noreferrer">${doc.url}</a>
+                                `;
+                                memberDocumentsContent.appendChild(docElement);
+                            });
+                        } catch (error) {
+                            console.error('Error loading member documents:', error);
+                            memberDocumentsContent.innerHTML = '<p style="color: red;">Failed to load documents.</p>';
+                        }
+                    }
+
+                    approveMemberBtn.addEventListener('click', async () => {
+                        if (!selectedMemberId) return;
+                        try {
+                            await enhancedFirebaseService.updateMemberApprovalStatus(selectedMemberId, 'approved');
+                            alert('Member approved successfully.');
+                            closeModal('member-documents-modal');
+                            await loadPendingMembers();
+                        } catch (error) {
+                            console.error('Error approving member:', error);
+                            alert('Failed to approve member.');
+                        }
+                    });
+
+                    rejectMemberBtn.addEventListener('click', async () => {
+                        if (!selectedMemberId) return;
+                        try {
+                            await enhancedFirebaseService.updateMemberApprovalStatus(selectedMemberId, 'rejected');
+                            alert('Member rejected successfully.');
+                            closeModal('member-documents-modal');
+                            await loadPendingMembers();
+                        } catch (error) {
+                            console.error('Error rejecting member:', error);
+                            alert('Failed to reject member.');
+                        }
+                    });
+
+                    // Load pending members on page load
+                    loadPendingMembers();
+                });
+            </script>
 </body>
 </html>
