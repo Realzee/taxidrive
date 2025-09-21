@@ -422,1125 +422,39 @@
             cursor: pointer;
             margin-left: 15px;
         }
-
-        .btn-google {
-            background-color: #DB4437;
-            color: var(--white);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .divider {
-            text-align: center;
-            margin: 15px 0;
-            position: relative;
-        }
-
-        .divider span {
-            background-color: var(--white);
-            padding: 0 10px;
-            color: #666;
-            font-size: 14px;
-        }
-
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background-color: var(--gray);
-            z-index: -1;
-        }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDF4QoPKP02tFadu2pOVlcZRXaA5NcpmY0",
-            authDomain: "taxidrive-337a3.firebaseapp.com",
-            databaseURL: "https://taxidrive-337a3-default-rtdb.firebaseio.com",
-            projectId: "taxidrive-337a3",
-            storageBucket: "taxidrive-337a3.firebasestorage.app",
-            messagingSenderId: "715498763019",
-            appId: "1:715498763019:web:b9fb152a7d5411ebba680e",
-            measurementId: "G-NB9PMBD7DQ"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.database();
-
-        // Initialize variables
-        let walletBalance = 0;
-        let isLoggedIn = false;
-        let userId = null;
-        let ownerName = '';
-        let userRole = 'Owner';
-
-        // Utility functions
-        function showLoading(elementId) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.innerHTML = '<p>Loading...</p>';
-            }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
         }
-
-        function showError(elementId, message) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.innerHTML = `<p style="color: var(--danger);">${message}</p>`;
-            }
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        // User profile functions
-        function updateUserProfile(name, role) {
-            const userNameElement = document.getElementById('user-name');
-            const userRoleElement = document.getElementById('user-role');
-            const userAvatarElement = document.getElementById('user-avatar');
-
-            if (userNameElement) userNameElement.textContent = name;
-            if (userRoleElement) userRoleElement.textContent = role;
-            if (userAvatarElement) userAvatarElement.textContent = name.charAt(0).toUpperCase();
-        }
-
-        async function loadUserData() {
-            if (!userId || !db) {
-                console.warn('User not authenticated or database not initialized');
-                return;
-            }
-
-            try {
-                const userSnapshot = await db.ref(`users/owners/${userId}`).once('value');
-                const userData = userSnapshot.val();
-
-                if (userData) {
-                    ownerName = userData.name || ownerName;
-                    userRole = userData.role || userRole;
-
-                    // Update localStorage with fresh data
-                    localStorage.setItem('userName', ownerName);
-                    localStorage.setItem('userRole', userRole);
-
-                    // Update UI with fresh data
-                    updateUserProfile(ownerName, userRole);
-                }
-            } catch (error) {
-                console.error('Error loading user data:', error);
-            }
-        }
-
-        // Update earnings history
-        function updateEarningsHistory(period = 'daily') {
-            if (!userId) return;
-            const earningsList = document.getElementById('earnings-list');
-            const recentEarnings = document.getElementById('recent-earnings');
-            showLoading('earnings-list');
-            showLoading('recent-earnings');
-
-            let total = 0;
-            let driverTotals = {};
-
-            const now = new Date();
-            const startDate = period === 'daily' ? new Date(now.setHours(0, 0, 0, 0)) :
-                period === 'weekly' ? new Date(now.setDate(now.getDate() - 7)) :
-                    new Date(now.setDate(now.getDate() - 30));
-
-            db.ref(`users/owners/${userId}/earnings`).once('value', snapshot => {
-                const earnings = snapshot.val() || [];
-                const earningsArray = Object.values(earnings).filter(earning => {
-                    const earningDate = new Date(earning.time);
-                    return earningDate >= startDate;
-                });
-                earningsArray.forEach(earning => {
-                    const amount = Number(earning.amount) || 0;
-                    total += amount;
-                    const driver = earning.driver || 'Unknown';
-                    if (!driverTotals[driver]) driverTotals[driver] = 0;
-                    driverTotals[driver] += amount;
-                });
-
-                earningsList.innerHTML = '';
-                recentEarnings.innerHTML = '';
-
-                const sortedEarnings = earningsArray.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-                sortedEarnings.forEach(earning => {
-                    const driver = earning.driver || 'Unknown';
-                    const earningHtml = `
-                        <div class="list-item">
-                            <div class="item-info">
-                                <div class="item-icon"><i class="fas fa-money-bill"></i></div>
-                                <div class="item-details">
-                                    <h4>${earning.vehicle}</h4>
-                                    <p>${earning.time}</p>
-                                    <p><strong>Driver:</strong> ${driver}</p>
-                                </div>
-                            </div>
-                            <div class="item-value">R ${Number(earning.amount).toFixed(2)}</div>
-                        </div>`;
-                    earningsList.innerHTML += earningHtml;
-                });
-
-                if (period === 'daily') {
-                    const recentSorted = sortedEarnings.slice(0, 5);
-                    recentSorted.forEach(earning => {
-                        const driver = earning.driver || 'Unknown';
-                        const earningHtml = `
-                            <div class="list-item">
-                                <div class="item-info">
-                                    <div class="item-icon"><i class="fas fa-money-bill"></i></div>
-                                    <div class="item-details">
-                                        <h4>${earning.vehicle}</h4>
-                                        <p>${earning.time}</p>
-                                        <p><strong>Driver:</strong> ${driver}</p>
-                                    </div>
-                                </div>
-                                <div class="item-value">R ${Number(earning.amount).toFixed(2)}</div>
-                            </div>`;
-                        recentEarnings.innerHTML += earningHtml;
-                    });
-                }
-
-                let driverTotalsHtml = '';
-                Object.entries(driverTotals).forEach(([driver, amount]) => {
-                    driverTotalsHtml += `
-                        <div class="list-item">
-                            <div class="item-info">
-                                <div class="item-icon"><i class="fas fa-user"></i></div>
-                                <div class="item-details">
-                                    <h4>${driver}</h4>
-                                </div>
-                            </div>
-                            <div class="item-value">R ${amount.toFixed(2)}</div>
-                        </div>`;
-                    earningsList.innerHTML = driverTotalsHtml + earningsList.innerHTML;
-                });
-
-                document.getElementById('earnings-total').textContent = total.toFixed(2);
-                if (period === 'daily') {
-                    document.getElementById('wallet-balance').textContent = `R ${total.toFixed(2)}`;
-                }
-            }).catch(error => {
-                showError('earnings-list', 'Failed to load earnings.');
-                showError('recent-earnings', 'Failed to load earnings.');
-                alert('Error loading earnings: ' + error.message);
-            });
-        }
-
-        // Update fleet overview
-        const debouncedUpdateFleetOverview = debounce(async function updateFleetOverview() {
-            console.log('updateFleetOverview called with userId:', userId);
-            if (!userId) {
-                console.warn('No userId, skipping updateFleetOverview');
-                return;
-            }
-
-            const fleetList = document.getElementById('fleet-list');
-            const fleetVehicles = document.getElementById('fleet-vehicles');
-            if (!fleetList || !fleetVehicles) {
-                console.error('Fleet list or vehicles DOM elements not found');
-                return;
-            }
-
-            showLoading('fleet-list');
-            showLoading('fleet-vehicles');
-
-            try {
-                const vehiclesRef = db.ref(`users/owners/${userId}/vehicles`);
-                vehiclesRef.off(); // Detach previous listeners to prevent duplicates
-                vehiclesRef.on('value', snapshot => {
-                    const vehicles = snapshot.val() || {};
-                    console.log('Fetched vehicles:', vehicles);
-
-                    fleetList.innerHTML = '';
-                    fleetVehicles.innerHTML = '';
-
-                    if (Object.keys(vehicles).length === 0) {
-                        fleetList.innerHTML = '<p>No vehicles found.</p>';
-                        fleetVehicles.innerHTML = '<p>No vehicles found.</p>';
-                        updateMaintenanceDropdown();
-                        return;
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
                     }
-
-                    db.ref(`users/owners/${userId}/earnings`).once('value', earningsSnapshot => {
-                        const earnings = earningsSnapshot.val() || {};
-
-                        // Calculate total earnings per vehicle
-                        const earningsByVehicle = {};
-                        Object.values(earnings).forEach(e => {
-                            if (e.vehicle) {
-                                earningsByVehicle[e.vehicle] = (earningsByVehicle[e.vehicle] || 0) + Number(e.amount || 0);
-                            }
-                        });
-
-                        // Fetch all drivers for name lookup
-                        db.ref(`users/owners/${userId}/drivers`).once('value', driversSnapshot => {
-                            const drivers = driversSnapshot.val() || {};
-
-                            // Map driver IDs to names
-                            const driverNames = {};
-                            Object.entries(drivers).forEach(([driverId, driver]) => {
-                                driverNames[driverId] = driver.name || 'Unassigned';
-                            });
-
-                            // Build HTML
-                            Object.entries(vehicles).forEach(([index, vehicle]) => {
-                                let status = 'Inactive (Not Allocated)';
-                                let statusColor = 'var(--danger)';
-                                if (vehicle.driverId) {
-                                    status = 'Active (Allocated)';
-                                    statusColor = 'var(--success)';
-                                } else if (vehicle.maintenance && Object.keys(vehicle.maintenance).length > 0) {
-                                    status = 'Maintenance';
-                                    statusColor = 'var(--warning)';
-                                }
-                                const driverName = vehicle.driverId ? driverNames[vehicle.driverId] || 'Unassigned' : 'Unassigned';
-                                const totalEarnings = earningsByVehicle[vehicle.reg] || 0;
-
-                                const vehicleHtml = `
-                                    <div class="list-item" data-vehicle-index="${index}">
-                                        <div class="item-info">
-                                            <div class="item-icon"><i class="fas fa-shuttle-van"></i></div>
-                                            <div class="item-details">
-                                                <h4>${vehicle.make || ''} ${vehicle.model || ''}</h4>
-                                                <p>${vehicle.reg}</p>
-                                                <p><strong>Driver:</strong> ${driverName}</p>
-                                                <p style="color:${statusColor};font-weight:600;">${status}</p>
-                                                <p><strong>Total Earnings:</strong> R ${totalEarnings.toFixed(2)}</p>
-                                            </div>
-                                        </div>
-                                        <div class="item-actions">
-                                            <button class="btn btn-secondary edit-vehicle-btn" data-vehicle-index="${index}">Edit</button>
-                                            <button class="btn btn-danger remove-vehicle-btn" data-vehicle-index="${index}">Remove</button>
-                                        </div>
-                                    </div>`;
-                                let statusIndicator = '';
-                                if (status === 'Active (Allocated)') {
-                                    statusIndicator = '<span style="color: var(--success); font-weight: 700; font-size: 24px;">&#9679;</span>';
-                                } else if (status === 'Maintenance') {
-                                    statusIndicator = '<span style="color: var(--warning); font-weight: 700; font-size: 24px;">&#9679;</span>';
-                                } else {
-                                    statusIndicator = '<span style="color: var(--danger); font-weight: 700; font-size: 24px;">&#9679;</span>';
-                                }
-                                const vehicleHtmlWithStatus = vehicleHtml.replace(
-                                    `<h4>${vehicle.make || ''} ${vehicle.model || ''}</h4>`,
-                                    `<h4>${statusIndicator} ${vehicle.make || ''} ${vehicle.model || ''}</h4>`
-                                );
-                                const vehicleHtmlMain = vehicleHtmlWithStatus.replace(
-                                    `<p><strong>Total Earnings:</strong> R ${totalEarnings.toFixed(2)}</p>`,
-                                    ''
-                                ).replace(
-                                    /<div class="item-actions">[\s\S]*?<\/div>/,
-                                    `<div class="item-value">R ${totalEarnings.toFixed(2)}</div>`
-                                );
-                                fleetList.innerHTML += vehicleHtmlWithStatus;
-                                fleetVehicles.innerHTML += vehicleHtmlMain;
-                            });
-
-                            updateMaintenanceDropdown();
-
-                            // Attach event listeners using MutationObserver
-                            const observer = new MutationObserver(() => {
-                                document.querySelectorAll('#fleet-list .edit-vehicle-btn').forEach(btn => {
-                                    btn.addEventListener('click', () => {
-                                        const vehicleIndex = btn.getAttribute('data-vehicle-index');
-                                        db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).once('value', snapshot => {
-                                            const vehicle = snapshot.val();
-                                            if (vehicle) {
-                                                document.getElementById('edit-vehicle-make').value = vehicle.make || '';
-                                                document.getElementById('edit-vehicle-model').value = vehicle.model || '';
-                                                document.getElementById('edit-vehicle-year').value = vehicle.year || '';
-                                                document.getElementById('edit-vehicle-color').value = vehicle.color || '';
-                                                document.getElementById('edit-vehicle-vin').value = vehicle.vin || '';
-                                                document.getElementById('edit-vehicle-engine').value = vehicle.engine || '';
-                                                document.getElementById('edit-vehicle-reg').value = vehicle.reg || '';
-                                                document.getElementById('edit-vehicle-license-expiry').value = vehicle.licenseExpiry || '';
-                                                document.getElementById('confirm-edit-vehicle').setAttribute('data-vehicle-index', vehicleIndex);
-                                                openModal('edit-vehicle-modal');
-                                            }
-                                        }).catch(error => {
-                                            alert('Error loading vehicle data: ' + error.message);
-                                        });
-                                    });
-                                });
-
-                                document.querySelectorAll('#fleet-list .remove-vehicle-btn').forEach(btn => {
-                                    btn.addEventListener('click', () => {
-                                        const vehicleIndex = btn.getAttribute('data-vehicle-index');
-                                        if (confirm('Are you sure you want to remove this vehicle from your fleet?')) {
-                                            db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).once('value', snapshot => {
-                                                const vehicle = snapshot.val();
-                                                if (vehicle.driverId) {
-                                                    db.ref(`users/owners/${userId}/drivers/${vehicle.driverId}`).update({
-                                                        vehicleId: ''
-                                                    }).catch(error => {
-                                                        alert('Error deallocating driver: ' + error.message);
-                                                    });
-                                                }
-                                                db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).remove()
-                                                    .then(() => {
-                                                        alert('Vehicle removed successfully!');
-                                                    })
-                                                    .catch(error => {
-                                                        alert('Error removing vehicle: ' + error.message);
-                                                    });
-                                            });
-                                        }
-                                    });
-                                });
-
-                                document.getElementById('confirm-edit-vehicle').addEventListener('click', () => {
-                                    const vehicleIndex = document.getElementById('confirm-edit-vehicle').getAttribute('data-vehicle-index');
-                                    const make = document.getElementById('edit-vehicle-make').value;
-                                    const model = document.getElementById('edit-vehicle-model').value;
-                                    const year = document.getElementById('edit-vehicle-year').value;
-                                    const color = document.getElementById('edit-vehicle-color').value;
-                                    const vin = document.getElementById('edit-vehicle-vin').value;
-                                    const engine = document.getElementById('edit-vehicle-engine').value;
-                                    const reg = document.getElementById('edit-vehicle-reg').value;
-                                    const licenseExpiry = document.getElementById('edit-vehicle-license-expiry').value;
-                                    if (make && model && year && color && vin && engine && reg && licenseExpiry && vehicleIndex) {
-                                        db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).update({
-                                            make: make,
-                                            model: model,
-                                            year: year,
-                                            color: color,
-                                            vin: vin,
-                                            engine: engine,
-                                            reg: reg,
-                                            licenseExpiry: licenseExpiry
-                                        }).then(() => {
-                                            closeModal('edit-vehicle-modal');
-                                            alert('Vehicle updated successfully!');
-                                        }).catch(error => {
-                                            alert('Error updating vehicle: ' + error.message);
-                                        });
-                                    } else {
-                                        alert('Please fill in all fields');
-                                    }
-                                });
-
-                                observer.disconnect();
-                            });
-                            observer.observe(fleetList, { childList: true, subtree: true });
-                        }).catch(error => {
-                            console.error('Error fetching drivers:', error);
-                            showError('fleet-list', 'Failed to load drivers.');
-                            showError('fleet-vehicles', 'Failed to load drivers.');
-                        });
-                    }, error => {
-                        console.error('Error fetching earnings:', error);
-                        showError('fleet-list', 'Failed to load earnings.');
-                        showError('fleet-vehicles', 'Failed to load earnings.');
-                    });
-                }, error => {
-                    console.error('Error in real-time vehicles update:', error);
-                    showError('fleet-list', 'Failed to load vehicles.');
-                    showError('fleet-vehicles', 'Failed to load vehicles.');
-                    updateMaintenanceDropdown();
-                    alert('Error loading vehicles: ' + error.message);
-                });
-            } catch (error) {
-                console.error('Error initializing fleet update:', error);
-                showError('fleet-list', 'Failed to load vehicles.');
-                showError('fleet-vehicles', 'Failed to load vehicles.');
-                updateMaintenanceDropdown();
-                alert('Error loading vehicles: ' + error.message);
-            }
-        }, 300);
-
-        // Update maintenance dropdown
-        function updateMaintenanceDropdown() {
-            const select = document.getElementById('maintenance-vehicle');
-            if (!select) return;
-            select.innerHTML = '';
-            db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
-                const vehicles = snapshot.val() || [];
-                if (Object.keys(vehicles).length === 0) {
-                    select.innerHTML = '<option value="">No vehicles available</option>';
-                    return;
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
                 }
-                Object.entries(vehicles).forEach(([index, vehicle]) => {
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = `${vehicle.make || ''} ${vehicle.model} (${vehicle.reg})`;
-                    select.appendChild(option);
-                });
-            }).catch(error => {
-                console.error('Error updating maintenance dropdown:', error);
-                select.innerHTML = '<option value="">Error loading vehicles</option>';
-            });
+            }
+            return gk_fileData[filename] || "";
         }
-
-        // Update driver management
-        const debouncedUpdateDriverManagement = debounce(function updateDriverManagement() {
-            if (!userId) {
-                console.log('No userId, skipping updateDriverManagement');
-                return;
-            }
-            console.log('Fetching drivers for owner:', userId);
-            const driverList = document.getElementById('driver-list');
-            const driverSelect = document.getElementById('manage-driver-select');
-            if (!driverList || !driverSelect) {
-                console.error('Driver list or select DOM elements not found');
-                return;
-            }
-            showLoading('driver-list');
-            driverSelect.innerHTML = '';
-
-            db.ref(`users/owners/${userId}/drivers`).on('value', snapshot => {
-                const drivers = snapshot.val() || {};
-                console.log('Drivers data:', drivers);
-                driverList.innerHTML = '';
-                if (Object.keys(drivers).length === 0) {
-                    driverList.innerHTML = '<p>No drivers found.</p>';
-                    return;
-                }
-
-                Object.entries(drivers).forEach(([index, driver]) => {
-                    db.ref(`users/drivers/${driver.driverId}`).once('value', driverSnap => {
-                        const driverData = driverSnap.val() || {};
-                        console.log(`Driver ${driver.driverId} data:`, driverData);
-                        let status = driverData.onDuty ? 'On Duty' : 'Off Duty';
-                        if (driverData.onDuty && !driver.vehicleId) {
-                            status = 'Off Duty (No Vehicle)';
-                        }
-                        const statusColor = driverData.onDuty && driver.vehicleId ? 'var(--success)' : 'var(--danger)';
-                        const route = driverData.currentRoute || 'N/A';
-                        let earningsToday = 0;
-                        const today = new Date().toISOString().slice(0, 10);
-                        if (driverData.trips) {
-                            Object.values(driverData.trips).forEach(trip => {
-                                if (trip.timestamp && trip.timestamp.slice(0, 10) === today) {
-                                    earningsToday += Number(trip.amount) || 0;
-                                }
-                            });
-                        }
-                        db.ref(`users/owners/${userId}/vehicles`).once('value', vehicleSnap => {
-                            const vehicles = vehicleSnap.val() || {};
-                            const allocatedVehicle = driverData.vehicleId ? vehicles[driverData.vehicleId] : null;
-                            const vehicleInfo = allocatedVehicle ? `${allocatedVehicle.make || ''} ${allocatedVehicle.model || ''} (${allocatedVehicle.reg || ''})` : 'Unassigned';
-                            const driverHtml = `
-                                <div class="list-item" data-driver-index="${index}">
-                                    <div class="item-info">
-                                        <div class="item-icon"><i class="fas fa-user"></i></div>
-                                        <div class="item-details">
-                                            <h4>${driverData.name || driver.name || 'Unknown'}</h4>
-                                            <p>${driverData.email || driver.email || 'N/A'}</p>
-                                            <p style="color:${statusColor};font-weight:600;">${status}</p>
-                                            <p><strong>Current Route:</strong> ${route}</p>
-                                            <p><strong>Allocated Vehicle:</strong> ${vehicleInfo}</p>
-                                            <p><strong>Today's Earnings:</strong> R ${earningsToday.toFixed(2)}</p>
-                                        </div>
-                                    </div>
-                                    <div class="item-actions">
-                                        <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
-                                        <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
-                                    </div>
-                                </div>`;
-                            driverList.innerHTML += driverHtml;
-                            const option = document.createElement('option');
-                            option.value = index;
-                            option.textContent = driverData.name || driver.name || 'Unknown';
-                            driverSelect.appendChild(option);
-                        }).catch(error => {
-                            console.error('Error fetching vehicles for driver:', error);
-                            showError('driver-list', 'Failed to load driver data.');
-                        });
-                    }, error => {
-                        console.error(`Error fetching driver ${driver.driverId}:`, error.message);
-                        const driverHtml = `
-                            <div class="list-item" data-driver-index="${index}">
-                                <div class="item-info">
-                                    <div class="item-icon"><i class="fas fa-user"></i></div>
-                                    <div class="item-details">
-                                        <h4>${driver.name || 'Unknown'}</h4>
-                                        <p>${driver.email || 'N/A'}</p>
-                                        <p style="color:var(--danger);font-weight:600;">Data Unavailable</p>
-                                    </div>
-                                </div>
-                                <div class="item-actions">
-                                    <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
-                                    <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
-                                </div>
-                            </div>`;
-                        driverList.innerHTML += driverHtml;
-                        const option = document.createElement('option');
-                        option.value = index;
-                        option.textContent = driver.name || 'Unknown';
-                        driverSelect.appendChild(option);
-                    });
-                });
-
-                updateDriverBehavior();
-
-                const observer = new MutationObserver(() => {
-                    document.querySelectorAll('.edit-driver-btn').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const driverIndex = btn.getAttribute('data-driver-index');
-                            db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
-                                const driver = snapshot.val();
-                                if (driver) {
-                                    document.getElementById('edit-driver-name').value = driver.name || '';
-                                    document.getElementById('edit-driver-email').value = driver.email || '';
-                                    document.getElementById('confirm-edit-driver').setAttribute('data-driver-index', driverIndex);
-                                    openModal('edit-driver-modal');
-                                }
-                            }).catch(error => {
-                                alert('Error loading driver data: ' + error.message);
-                            });
-                        });
-                    });
-
-                    document.querySelectorAll('.remove-driver-btn').forEach(btn => {
-                        btn.addEventListener('click', () => {
-                            const driverIndex = btn.getAttribute('data-driver-index');
-                            if (confirm('Are you sure you want to remove this driver from your fleet?')) {
-                                db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
-                                    const driver = snapshot.val();
-                                    if (driver.vehicleId) {
-                                        db.ref(`users/owners/${userId}/vehicles/${driver.vehicleId}`).update({
-                                            driverId: ''
-                                        }).catch(error => {
-                                            alert('Error deallocating vehicle: ' + error.message);
-                                        });
-                                    }
-                                    db.ref(`users/owners/${userId}/drivers/${driverIndex}`).remove()
-                                        .then(() => {
-                                            debouncedUpdateDriverManagement();
-                                            debouncedUpdateFleetOverview();
-                                            alert('Driver removed successfully!');
-                                        })
-                                        .catch(error => {
-                                            alert('Error removing driver: ' + error.message);
-                                        });
-                                });
-                            }
-                        });
-                    });
-                    observer.disconnect();
-                });
-                observer.observe(driverList, { childList: true, subtree: true });
-            }, error => {
-                console.error('Error loading drivers:', error);
-                showError('driver-list', 'Failed to load drivers.');
-                alert('Error loading drivers: ' + error.message);
-            });
-        }, 300);
-
-        // Update driver behavior
-        function updateDriverBehavior() {
-            const driverSelect = document.getElementById('manage-driver-select');
-            const behaviorList = document.getElementById('driver-behavior');
-            behaviorList.innerHTML = '';
-            if (!driverSelect.value) return;
-            db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior`).once('value', snapshot => {
-                const behaviors = snapshot.val() || {};
-                Object.entries(behaviors).forEach(([index, behavior]) => {
-                    const behaviorHtml = `
-                        <div class="list-item" data-behavior-index="${index}">
-                            <div class="item-info">
-                                <div class="item-icon"><i class="fas fa-comment"></i></div>
-                                <div class="item-details">
-                                    <h4>${behavior.subject || 'Comment'}</h4>
-                                    <p>${behavior.message || ''} - ${behavior.time || ''}</p>
-                                    <p><strong>Passenger Email:</strong> ${behavior.passengerEmail || 'N/A'}</p>
-                                </div>
-                            </div>
-                            <button class="btn btn-success resolve-comment-btn" data-comment-id="${index}">Resolve</button>
-                            <button class="btn btn-secondary reply-comment-btn" data-email="${behavior.passengerEmail}">Reply</button>
-                        </div>`;
-                    behaviorList.innerHTML += behaviorHtml;
-                });
-
-                document.querySelectorAll('.reply-comment-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const email = btn.dataset.email;
-                        if (email && email !== 'N/A') {
-                            window.location.href = `mailto:${email}?subject=Reply from TaxiDrive Owner`;
-                        } else {
-                            alert('No passenger email available.');
-                        }
-                    });
-                });
-
-                document.querySelectorAll('.resolve-comment-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const commentId = btn.dataset.commentId;
-                        db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior/${commentId}`).remove();
-                        updateDriverBehavior();
-                    });
-                });
-            });
-        }
-
-        // Modal functionality
-        const modals = document.querySelectorAll('.modal');
-        const closeModalButtons = document.querySelectorAll('.modal-close');
-
-        function openModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'flex';
-            }
-        }
-
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'none';
-            }
-        }
-
-        closeModalButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                button.closest('.modal').style.display = 'none';
-            });
-        });
-
-        modals.forEach(modal => {
-            modal.addEventListener('click', e => {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        });
-
-        // Bottom navigation
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                item.classList.add('active');
-                const navAction = item.dataset.nav;
-                if (navAction === 'home') {
-                    window.scrollTo(0, 0);
-                } else if (navAction === 'earnings') {
-                    updateEarningsHistory();
-                    openModal('earnings-history-modal');
-                } else if (navAction === 'fleet') {
-                    debouncedUpdateFleetOverview();
-                    openModal('fleet-overview-modal');
-                } else if (navAction === 'profile') {
-                    openModal('login-modal');
-                }
-            });
-        });
-
-        // Earnings history
-        document.getElementById('earnings-history-btn').addEventListener('click', () => {
-            updateEarningsHistory();
-            openModal('earnings-history-modal');
-        });
-
-        document.getElementById('earnings-period').addEventListener('change', (e) => {
-            updateEarningsHistory(e.target.value);
-        });
-
-        // Fleet overview
-        document.getElementById('fleet-overview-btn').addEventListener('click', () => {
-            debouncedUpdateFleetOverview();
-            openModal('fleet-overview-modal');
-        });
-
-        document.getElementById('add-vehicle-btn').addEventListener('click', () => {
-            openModal('add-vehicle-modal');
-        });
-
-        document.getElementById('confirm-add-vehicle').addEventListener('click', () => {
-            const make = document.getElementById('vehicle-make').value;
-            const model = document.getElementById('vehicle-model').value;
-            const year = document.getElementById('vehicle-year').value;
-            const color = document.getElementById('vehicle-color').value;
-            const vin = document.getElementById('vehicle-vin').value;
-            const engine = document.getElementById('vehicle-engine').value;
-            const reg = document.getElementById('vehicle-reg').value;
-            const licenseExpiry = document.getElementById('vehicle-license-expiry').value;
-            if (make && model && year && color && vin && engine && reg && licenseExpiry) {
-                db.ref(`users/owners/${userId}/vehicles`).push({
-                    make: make,
-                    model: model,
-                    year: year,
-                    color: color,
-                    vin: vin,
-                    engine: engine,
-                    reg: reg,
-                    licenseExpiry: licenseExpiry,
-                    driverId: ''
-                }).then(() => {
-                    closeModal('add-vehicle-modal');
-                    debouncedUpdateFleetOverview();
-                    alert('Vehicle added successfully!');
-                }).catch(error => {
-                    alert('Error adding vehicle: ' + error.message);
-                });
-            } else {
-                alert('Please fill in all fields');
-            }
-        });
-
-        document.getElementById('maintain-vehicle-btn').addEventListener('click', () => {
-            updateMaintenanceDropdown();
-            openModal('maintain-vehicle-modal');
-        });
-
-        document.getElementById('confirm-maintenance').addEventListener('click', () => {
-            const vehicleIndex = document.getElementById('maintenance-vehicle').value;
-            const type = document.getElementById('maintenance-type').value;
-            const amount = parseFloat(document.getElementById('maintenance-amount').value);
-            const description = document.getElementById('maintenance-description').value;
-            if (vehicleIndex && type && amount && description) {
-                db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}/maintenance`).push({
-                    type: type,
-                    amount: amount,
-                    description: description,
-                    date: new Date().toLocaleString()
-                }).then(() => {
-                    closeModal('maintain-vehicle-modal');
-                    debouncedUpdateFleetOverview();
-                    alert('Maintenance logged successfully!');
-                }).catch(error => {
-                    alert('Error logging maintenance: ' + error.message);
-                });
-            } else {
-                alert('Please fill in all fields');
-            }
-        });
-
-        // Driver management
-        document.getElementById('driver-management-btn').addEventListener('click', () => {
-            debouncedUpdateDriverManagement();
-            openModal('driver-management-modal');
-        });
-
-        document.getElementById('add-driver-btn').addEventListener('click', () => {
-            openModal('add-driver-modal');
-        });
-
-        document.getElementById('confirm-add-driver').addEventListener('click', async () => {
-            const name = document.getElementById('driver-name').value;
-            const surname = document.getElementById('driver-surname').value;
-            const cell = document.getElementById('driver-cell').value;
-            const licenseType = document.getElementById('driver-license-type').value;
-            const licenseExpiry = document.getElementById('driver-license-expiry').value;
-            const username = document.getElementById('driver-username').value;
-            const password = document.getElementById('driver-password').value;
-
-            if (name && surname && cell && licenseType && licenseExpiry && username && password) {
-                try {
-                    console.log('confirm-add-driver triggered at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-                    // Create driver account
-                    const userCredential = await auth.createUserWithEmailAndPassword(username, password);
-                    const driverId = userCredential.user.uid;
-
-                    // Store driver data
-                    await db.ref(`users/drivers/${driverId}`).set({
-                        name: name + ' ' + surname,
-                        surname: surname,
-                        cell: cell,
-                        licenseType: licenseType,
-                        licenseExpiry: licenseExpiry,
-                        email: username,
-                        onDuty: false,
-                        currentRoute: '',
-                        trips: [],
-                        behavior: [],
-                        vehicle: { ownerId: userId }
-                    });
-
-                    // Add driver to owner's drivers list
-                    await db.ref(`users/owners/${userId}/drivers`).push({
-                        driverId: driverId,
-                        name: name + ' ' + surname,
-                        email: username,
-                        onDuty: false,
-                        behavior: []
-                    });
-
-                    // Update UI
-                    closeModal('add-driver-modal');
-                    await debouncedUpdateDriverManagement();
-                    await debouncedUpdateFleetOverview();
-                    alert('Driver added successfully!');
-                } catch (error) {
-                    console.error('Error in confirm-add-driver:', error);
-                    alert('Error creating driver account: ' + error.message);
-                }
-            } else {
-                alert('Please fill in all fields');
-            }
-        });
-
-        document.getElementById('manage-driver-btn').addEventListener('click', () => {
-            debouncedUpdateDriverManagement();
-            openModal('manage-driver-modal');
-        });
-
-        document.getElementById('manage-driver-select').addEventListener('change', () => {
-            updateDriverBehavior();
-        });
-
-        document.getElementById('save-driver-notes').addEventListener('click', () => {
-            const driverIndex = document.getElementById('manage-driver-select').value;
-            const notes = document.getElementById('driver-notes').value;
-            if (driverIndex && notes) {
-                db.ref(`users/owners/${userId}/drivers/${driverIndex}/notes`).push({
-                    note: notes,
-                    time: new Date().toLocaleString()
-                }).then(() => {
-                    closeModal('manage-driver-modal');
-                    alert('Notes saved successfully!');
-                }).catch(error => {
-                    alert('Error saving notes: ' + error.message);
-                });
-            } else {
-                alert('Please enter notes');
-            }
-        });
-
-        document.getElementById('confirm-edit-driver').addEventListener('click', () => {
-            const driverIndex = document.getElementById('confirm-edit-driver').getAttribute('data-driver-index');
-            const name = document.getElementById('edit-driver-name').value;
-            if (name && driverIndex) {
-                db.ref(`users/owners/${userId}/drivers/${driverIndex}`).update({
-                    name: name
-                }).then(() => {
-                    db.ref(`users/drivers/${driverIndex}/name`).set(name);
-                    debouncedUpdateDriverManagement();
-                    closeModal('edit-driver-modal');
-                    alert('Driver updated successfully!');
-                }).catch(error => {
-                    alert('Error updating driver: ' + error.message);
-                });
-            } else {
-                alert('Please enter a name');
-            }
-        });
-
-        // Allocate vehicle
-        document.getElementById('allocate-vehicle-btn').addEventListener('click', () => {
-            const vehicleSelect = document.getElementById('allocate-vehicle-select');
-            vehicleSelect.innerHTML = '';
-            db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
-                const vehicles = snapshot.val() || {};
-                if (Object.keys(vehicles).length === 0) {
-                    vehicleSelect.innerHTML = '<option value="">No vehicles available</option>';
-                } else {
-                    Object.entries(vehicles).forEach(([key, vehicle]) => {
-                        const option = document.createElement('option');
-                        option.value = key;
-                        option.textContent = `${vehicle.make || ''} ${vehicle.model} (${vehicle.reg})`;
-                        vehicleSelect.appendChild(option);
-                    });
-                }
-            });
-
-            const driverSelect = document.getElementById('allocate-driver-select');
-            driverSelect.innerHTML = '';
-            db.ref(`users/owners/${userId}/drivers`).once('value', snapshot => {
-                const drivers = snapshot.val() || {};
-                if (Object.keys(drivers).length === 0) {
-                    driverSelect.innerHTML = '<option value="">No drivers available</option>';
-                } else {
-                    Object.entries(drivers).forEach(([key, driver]) => {
-                        const option = document.createElement('option');
-                        option.value = key;
-                        option.textContent = driver.name;
-                        driverSelect.appendChild(option);
-                    });
-                }
-            });
-
-            openModal('allocate-vehicle-modal');
-        });
-
-        document.getElementById('confirm-allocate-vehicle').addEventListener('click', () => {
-            const vehicleKey = document.getElementById('allocate-vehicle-select').value;
-            const driverKey = document.getElementById('allocate-driver-select').value;
-            if (vehicleKey && driverKey) {
-                db.ref(`users/owners/${userId}/vehicles/${vehicleKey}/driverId`).set(driverKey)
-                    .then(() => {
-                        db.ref(`users/owners/${userId}/drivers/${driverKey}/vehicleId`).set(vehicleKey);
-                        closeModal('allocate-vehicle-modal');
-                        debouncedUpdateFleetOverview();
-                        debouncedUpdateDriverManagement();
-                        alert('Vehicle allocated to driver!');
-                    }).catch(error => {
-                        alert('Error allocating vehicle: ' + error.message);
-                    });
-            } else {
-                alert('Please select both vehicle and driver');
-            }
-        });
-
-        // Withdraw funds
-        document.getElementById('withdraw-btn').addEventListener('click', () => {
-            openModal('withdraw-modal');
-        });
-
-        document.getElementById('confirm-withdraw').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('withdraw-amount').value);
-            if (amount > 0 && amount <= walletBalance) {
-                walletBalance -= amount;
-                db.ref(`users/owners/${userId}/walletBalance`).set(walletBalance).then(() => {
-                    document.getElementById('wallet-balance').textContent = `R ${walletBalance.toFixed(2)}`;
-                    closeModal('withdraw-modal');
-                    alert('Withdrawal successful!');
-                }).catch(error => {
-                    alert('Error processing withdrawal: ' + error.message);
-                });
-            } else {
-                alert('Invalid amount or insufficient funds');
-            }
-        });
-
-        // Authentication
-        auth.onAuthStateChanged(async (user) => {
-            console.log('Auth state changed:', user ? `UID: ${user.uid}, Email: ${user.email}` : 'No user');
-            if (user) {
-                isLoggedIn = true;
-                userId = user.uid;
-                console.log('Set userId:', userId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-
-                // Load user data from localStorage first
-                ownerName = localStorage.getItem('userName') || 'Loading...';
-                userRole = localStorage.getItem('userRole') || 'Owner';
-                updateUserProfile(ownerName, userRole);
-
-                // Load fresh data from database
-                await loadUserData();
-
-                // Load owner-specific data
-                db.ref(`users/owners/${userId}`).once('value', snapshot => {
-                    const data = snapshot.val();
-                    console.log('Owner data:', data);
-                    walletBalance = data?.walletBalance || 0;
-                    document.getElementById('wallet-balance').textContent = `R ${Number(walletBalance).toFixed(2)}`;
-                    ownerName = data?.name || ownerName;
-                    if (!data) {
-                        console.log('Creating new owner record for UID:', userId);
-                        db.ref(`users/owners/${userId}`).set({
-                            email: user.email,
-                            name: document.getElementById('signup-name').value || 'Owner',
-                            role: 'Owner',
-                            walletBalance: 0,
-                            vehicles: [],
-                            drivers: []
-                        });
-                    }
-                    updateEarningsHistory();
-                    debouncedUpdateFleetOverview();
-                    debouncedUpdateDriverManagement();
-                }).catch(error => {
-                    console.error('Error fetching owner data:', error.message);
-                });
-            } else {
-                isLoggedIn = false;
-                userId = null;
-                walletBalance = 0;
-                ownerName = '';
-                userRole = 'Owner';
-                document.getElementById('wallet-balance').textContent = 'R 0.00';
-                updateUserProfile('Loading...', 'Owner');
-                openModal('login-modal');
-                console.log('No user logged in at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-            }
-        });
-
-        // Login/Signup
-        document.getElementById('signup-btn').addEventListener('click', async () => {
-            const name = document.getElementById('signup-name').value;
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            if (name && email && password) {
-                try {
-                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                    const user = userCredential.user;
-                    await db.ref(`users/owners/${user.uid}`).set({
-                        email: email,
-                        name: name,
-                        role: 'Owner',
-                        walletBalance: 0,
-                        vehicles: [],
-                        drivers: []
-                    });
-                    localStorage.setItem('userName', name);
-                    localStorage.setItem('userRole', 'Owner');
-                    closeModal('login-modal');
-                    alert('Sign up successful!');
-                } catch (error) {
-                    console.error('Error signing up:', error);
-                    alert('Error signing up: ' + error.message);
-                }
-            } else {
-                alert('Please fill in all fields');
-            }
-        });
-
-        document.getElementById('login-btn').addEventListener('click', async () => {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            if (email && password) {
-                try {
-                    await auth.signInWithEmailAndPassword(email, password);
-                    closeModal('login-modal');
-                    alert('Login successful!');
-                } catch (error) {
-                    console.error('Error logging in:', error);
-                    alert('Error logging in: ' + error.message);
-                }
-            } else {
-                alert('Please enter email and password');
-            }
-        });
-
-        // Logout
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            openModal('logout-confirm-modal');
-        });
-
-        document.getElementById('confirm-logout').addEventListener('click', async () => {
-            try {
-                await auth.signOut();
-                localStorage.clear();
-                console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-                closeModal('logout-confirm-modal');
-                openModal('login-modal');
-                updateUserProfile('Loading...', 'Owner');
-                document.getElementById('wallet-balance').textContent = 'R 0.00';
-                document.getElementById('fleet-list').innerHTML = '';
-                document.getElementById('fleet-vehicles').innerHTML = '';
-                document.getElementById('driver-list').innerHTML = '';
-                alert('Logged out successfully!');
-            } catch (error) {
-                console.error('Error logging out:', error);
-                alert('Error logging out: ' + error.message);
-            }
-        });
-
-        document.getElementById('cancel-logout').addEventListener('click', () => {
-            closeModal('logout-confirm-modal');
-        });
     </script>
 </head>
 
@@ -1589,9 +503,11 @@
                     <span>Withdraw</span>
                 </div>
             </div>
-            <div class="section-title">Fleet Overview <span class="view-all" id="fleet-overview-btn">View All</span></div>
+            <div class="section-title">Fleet Overview <span class="view-all" id="fleet-overview-btn">View All</span>
+            </div>
             <div class="card" id="fleet-vehicles"></div>
-            <div class="section-title">Recent Earnings <span class="view-all" id="earnings-history-btn">View All</span></div>
+            <div class="section-title">Recent Earnings <span class="view-all" id="earnings-history-btn">View All</span>
+            </div>
             <div class="card" id="recent-earnings"></div>
         </div>
         <div class="bottom-nav">
@@ -1657,7 +573,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Year</label>
-                    <input type="number" class="form-input" id="vehicle-year" placeholder="Enter year" min="1900" max="2100">
+                    <input type="number" class="form-input" id="vehicle-year" placeholder="Enter year" min="1900"
+                        max="2100">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Color</label>
@@ -1698,7 +615,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Year</label>
-                    <input type="number" class="form-input" id="edit-vehicle-year" placeholder="Enter year" min="1900" max="2100">
+                    <input type="number" class="form-input" id="edit-vehicle-year" placeholder="Enter year" min="1900"
+                        max="2100">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Color</label>
@@ -1748,7 +666,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Description</label>
-                    <textarea class="form-input" id="maintenance-description" placeholder="Enter description"></textarea>
+                    <textarea class="form-input" id="maintenance-description"
+                        placeholder="Enter description"></textarea>
                 </div>
                 <button class="btn btn-primary" id="confirm-maintenance">Log Maintenance</button>
             </div>
@@ -1858,7 +777,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="edit-driver-email" placeholder="Enter driver email" readonly>
+                    <input type="email" class="form-input" id="edit-driver-email" placeholder="Enter driver email"
+                        readonly>
                 </div>
                 <button class="btn btn-primary" id="confirm-edit-driver">Update Driver</button>
             </div>
@@ -1869,7 +789,7 @@
                     <div class="modal-title">Login / Sign Up</div>
                     <div class="modal-close">&times;</div>
                 </div>
-                                <div class="form-group">
+                <div class="form-group">
                     <label class="form-label">Name</label>
                     <input type="text" class="form-input" id="signup-name" placeholder="Enter your name">
                 </div>
@@ -1881,23 +801,14 @@
                     <label class="form-label">Password</label>
                     <input type="password" class="form-input" id="login-password" placeholder="Enter your password">
                 </div>
-                <button class="btn btn-primary" id="login-btn">Login</button>
                 <button class="btn btn-primary" id="signup-btn">Sign Up</button>
-                <div class="divider"><span>OR</span></div>
-                <button class="btn btn-google">
-                    <i class="fab fa-google"></i> Continue with Google
-                </button>
-            </div>
-        </div>
-        <div class="modal" id="logout-confirm-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="modal-title">Confirm Logout</div>
-                    <div class="modal-close">&times;</div>
+                <button class="btn btn-secondary" id="login-btn">Login</button>
+                <div class="divider">
+                    <span>Or login with</span>
                 </div>
-                <p>Are you sure you want to log out?</p>
-                <button class="btn btn-danger" id="confirm-logout">Yes, Log Out</button>
-                <button class="btn btn-secondary" id="cancel-logout">Cancel</button>
+                <button class="btn btn-google">
+                    <i class="fab fa-google"></i> Google
+                </button>
             </div>
         </div>
         <div class="modal" id="withdraw-modal">
@@ -1908,11 +819,1129 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Amount</label>
-                    <input type="number" class="form-input" id="withdraw-amount" placeholder="Enter amount to withdraw">
+                    <input type="number" class="form-input" id="withdraw-amount" placeholder="Enter amount">
                 </div>
                 <button class="btn btn-primary" id="confirm-withdraw">Withdraw</button>
             </div>
         </div>
+        <div class="modal" id="logout-confirm-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">Confirm Logout</div>
+                    <div class="modal-close">&times;</div>
+                </div>
+                <p>Are you sure you want to logout?</p>
+                <button class="btn btn-secondary" id="cancel-logout">Cancel</button>
+                <button class="btn btn-primary" id="confirm-logout">Logout</button>
+            </div>
+        </div>
     </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDF4QoPKP02tFadu2pOVlcZRXaA5NcpmY0",
+            authDomain: "taxidrive-337a3.firebaseapp.com",
+            databaseURL: "https://taxidrive-337a3-default-rtdb.firebaseio.com",
+            projectId: "taxidrive-337a3",
+            storageBucket: "taxidrive-337a3.firebasestorage.app",
+            messagingSenderId: "715498763019",
+            appId: "1:715498763019:web:b9fb152a7d5411ebba680e",
+            measurementId: "G-NB9PMBD7DQ"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // Initialize variables
+        let walletBalance = 0;
+        let isLoggedIn = false;
+        let userId = null;
+        let ownerName = '';
+        let userRole = 'Owner';
+
+        // User profile functions
+        function updateUserProfile(name, role) {
+            const userNameElement = document.getElementById('user-name');
+            const userRoleElement = document.getElementById('user-role');
+            const userAvatarElement = document.getElementById('user-avatar');
+
+            if (userNameElement) userNameElement.textContent = name;
+            if (userRoleElement) userRoleElement.textContent = role;
+            if (userAvatarElement) userAvatarElement.textContent = name.charAt(0).toUpperCase();
+        }
+
+        async function loadUserData() {
+            if (!userId || !db) {
+                console.warn('User not authenticated or database not initialized');
+                return;
+            }
+
+            try {
+                const userSnapshot = await db.ref(`users/${userId}`).once('value');
+                const userData = userSnapshot.val();
+
+                if (userData) {
+                    ownerName = userData.name || ownerName;
+                    userRole = userData.role || userRole;
+
+                    // Update localStorage with fresh data
+                    localStorage.setItem('userName', ownerName);
+                    localStorage.setItem('userRole', userRole);
+
+                    // Update UI with fresh data
+                    updateUserProfile(ownerName, userRole);
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // Update earnings history
+        function updateEarningsHistory(period = 'daily') {
+            if (!userId) return;
+            const earningsList = document.getElementById('earnings-list');
+            const recentEarnings = document.getElementById('recent-earnings');
+            earningsList.innerHTML = '';
+            recentEarnings.innerHTML = '';
+
+            let total = 0;
+            let driverTotals = {};
+
+            const now = new Date();
+            const startDate = period === 'daily' ? new Date(now.setHours(0, 0, 0, 0)) :
+                period === 'weekly' ? new Date(now.setDate(now.getDate() - 7)) :
+                    new Date(now.setDate(now.getDate() - 30));
+
+            db.ref(`users/owners/${userId}/earnings`).once('value', snapshot => {
+                const earnings = snapshot.val() || [];
+                const earningsArray = Object.values(earnings).filter(earning => {
+                    const earningDate = new Date(earning.time);
+                    return earningDate >= startDate;
+                });
+                earningsArray.forEach(earning => {
+                    const amount = Number(earning.amount) || 0;
+                    total += amount;
+                    const driver = earning.driver || 'Unknown';
+                    if (!driverTotals[driver]) driverTotals[driver] = 0;
+                    driverTotals[driver] += amount;
+                });
+
+                const sortedEarnings = earningsArray.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+                sortedEarnings.forEach(earning => {
+                    const driver = earning.driver || 'Unknown';
+                    const earningHtml = `
+                        <div class="list-item">
+                            <div class="item-info">
+                                <div class="item-icon"><i class="fas fa-money-bill"></i></div>
+                                <div class="item-details">
+                                    <h4>${earning.vehicle}</h4>
+                                    <p>${earning.time}</p>
+                                    <p><strong>Driver:</strong> ${driver}</p>
+                                </div>
+                            </div>
+                            <div class="item-value">R ${earning.amount.toFixed(2)}</div>
+                        </div>`;
+                    earningsList.innerHTML += earningHtml;
+                });
+
+                if (period === 'daily') {
+                    const recentSorted = sortedEarnings.slice(0, 5);
+                    recentSorted.forEach(earning => {
+                        const driver = earning.driver || 'Unknown';
+                        const earningHtml = `
+                            <div class="list-item">
+                                <div class="item-info">
+                                    <div class="item-icon"><i class="fas fa-money-bill"></i></div>
+                                    <div class="item-details">
+                                        <h4>${earning.vehicle}</h4>
+                                        <p>${earning.time}</p>
+                                        <p><strong>Driver:</strong> ${driver}</p>
+                                    </div>
+                                </div>
+                                <div class="item-value">R ${earning.amount.toFixed(2)}</div>
+                            </div>`;
+                        recentEarnings.innerHTML += earningHtml;
+                    });
+                }
+
+                let driverTotalsHtml = '';
+                Object.entries(driverTotals).forEach(([driver, amount]) => {
+                    driverTotalsHtml += `
+                        <div class="list-item">
+                            <div class="item-info">
+                                <div class="item-icon"><i class="fas fa-user"></i></div>
+                                <div class="item-details">
+                                    <h4>${driver}</h4>
+                                </div>
+                            </div>
+                            <div class="item-value">R ${amount.toFixed(2)}</div>
+                        </div>`;
+                    earningsList.innerHTML = driverTotalsHtml + earningsList.innerHTML;
+                });
+
+                document.getElementById('earnings-total').textContent = total.toFixed(2);
+                if (period === 'daily') {
+                    document.getElementById('wallet-balance').textContent = `R ${total.toFixed(2)}`;
+                }
+            }).catch(error => {
+                alert('Error loading earnings: ' + error.message);
+            });
+        }
+
+        // Update fleet overview
+        async function updateFleetOverview() {
+        showLoading('fleet-list');
+        showLoading('fleet-vehicles');         
+            console.log('updateFleetOverview called with userId:', userId);
+    if (Object.keys(vehicles).length === 0) {
+        hideLoading('fleet-list', '<p>No vehicles found.</p>');
+        hideLoading('fleet-vehicles', '<p>No vehicles found.</p>');
+        return;
+    }
+
+    const fleetList = document.getElementById('fleet-list');
+    const fleetVehicles = document.getElementById('fleet-vehicles');
+    if (!fleetList || !fleetVehicles) {
+        console.error('Fleet list or vehicles DOM elements not found');
+        return;
+    }
+
+    // Clear previous content
+    fleetList.innerHTML = '<p>Loading vehicles...</p>';
+    fleetVehicles.innerHTML = '<p>Loading vehicles...</p>';
+
+    try {
+        const vehiclesSnapshot = await db.ref(`users/owners/${userId}/vehicles`).once('value');
+        const vehicles = vehiclesSnapshot.val() || {};
+        console.log('Fetched vehicles:', vehicles);
+
+        if (Object.keys(vehicles).length === 0) {
+            fleetList.innerHTML = '<p>No vehicles found.</p>';
+            fleetVehicles.innerHTML = '<p>No vehicles found.</p>';
+            return;
+        }
+
+        const earningsSnapshot = await db.ref(`users/owners/${userId}/earnings`).once('value');
+        const earnings = earningsSnapshot.val() || {};
+
+        // Calculate total earnings per vehicle
+        const earningsByVehicle = {};
+        Object.values(earnings).forEach(e => {
+            if (e.vehicle) {
+                earningsByVehicle[e.vehicle] = (earningsByVehicle[e.vehicle] || 0) + Number(e.amount || 0);
+            }
+        });
+
+        // Fetch all drivers for name lookup
+        const driversSnapshot = await db.ref(`users/owners/${userId}/drivers`).once('value');
+        const drivers = driversSnapshot.val() || {};
+
+        // Map driver IDs to names
+        const driverNames = {};
+        await Promise.all(Object.entries(drivers).map(async ([driverId, driver]) => {
+            driverNames[driverId] = driver.name || 'Unassigned';
+        }));
+
+        // Clear content before rebuilding
+        fleetList.innerHTML = '';
+        fleetVehicles.innerHTML = '';
+
+        // Build HTML
+        Object.entries(vehicles).forEach(([index, vehicle]) => {
+            let status = 'Inactive (Not Allocated)';
+            let statusColor = 'var(--danger)';
+            if (vehicle.driverId) {
+                status = 'Active (Allocated)';
+                statusColor = 'var(--success)';
+            } else if (vehicle.maintenance && Object.keys(vehicle.maintenance).length > 0) {
+                status = 'Maintenance';
+                statusColor = 'var(--warning)';
+            }
+            const driverName = vehicle.driverId ? driverNames[vehicle.driverId] || 'Unassigned' : 'Unassigned';
+            const totalEarnings = earningsByVehicle[vehicle.reg] || 0;
+
+            const vehicleHtml = `
+                <div class="list-item" data-vehicle-index="${index}">
+                    <div class="item-info">
+                        <div class="item-icon"><i class="fas fa-shuttle-van"></i></div>
+                        <div class="item-details">
+                            <h4>${vehicle.make || ''} ${vehicle.model || ''}</h4>
+                            <p>${vehicle.reg}</p>
+                            <p><strong>Driver:</strong> ${driverName}</p>
+                            <p style="color:${statusColor};font-weight:600;">${status}</p>
+                            <p><strong>Total Earnings:</strong> R ${totalEarnings.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-secondary edit-vehicle-btn" data-vehicle-index="${index}">Edit</button>
+                        <button class="btn btn-danger remove-vehicle-btn" data-vehicle-index="${index}">Remove</button>
+                    </div>
+                </div>`;
+            let statusIndicator = '';
+            if (status === 'Active (Allocated)') {
+                statusIndicator = '<span style="color: var(--success); font-weight: 700; font-size: 24px;">&#9679;</span>';
+            } else if (status === 'Maintenance') {
+                statusIndicator = '<span style="color: var(--warning); font-weight: 700; font-size: 24px;">&#9679;</span>';
+            } else {
+                statusIndicator = '<span style="color: var(--danger); font-weight: 700; font-size: 24px;">&#9679;</span>';
+            }
+            const vehicleHtmlWithStatus = vehicleHtml.replace(
+                `<h4>${vehicle.make || ''} ${vehicle.model || ''}</h4>`,
+                `<h4>${statusIndicator} ${vehicle.make || ''} ${vehicle.model || ''}</h4>`
+            );
+            const vehicleHtmlMain = vehicleHtmlWithStatus.replace(
+                `<p><strong>Total Earnings:</strong> R ${totalEarnings.toFixed(2)}</p>`,
+                ''
+            ).replace(
+                /<div class="item-actions">[\s\S]*?<\/div>/,
+                `<div class="item-value">R ${totalEarnings.toFixed(2)}</div>`
+            );
+            fleetList.innerHTML += vehicleHtmlWithStatus;
+            fleetVehicles.innerHTML += vehicleHtmlMain;
+        });
+
+        updateMaintenanceDropdown();
+
+        // Attach event listeners using MutationObserver
+        const observer = new MutationObserver(() => {
+            document.querySelectorAll('#fleet-list .edit-vehicle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const vehicleIndex = btn.getAttribute('data-vehicle-index');
+                    db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).once('value', snapshot => {
+                        const vehicle = snapshot.val();
+                        if (vehicle) {
+                            document.getElementById('edit-vehicle-make').value = vehicle.make || '';
+                            document.getElementById('edit-vehicle-model').value = vehicle.model || '';
+                            document.getElementById('edit-vehicle-year').value = vehicle.year || '';
+                            document.getElementById('edit-vehicle-color').value = vehicle.color || '';
+                            document.getElementById('edit-vehicle-vin').value = vehicle.vin || '';
+                            document.getElementById('edit-vehicle-engine').value = vehicle.engine || '';
+                            document.getElementById('edit-vehicle-reg').value = vehicle.reg || '';
+                            document.getElementById('edit-vehicle-license-expiry').value = vehicle.licenseExpiry || '';
+                            document.getElementById('confirm-edit-vehicle').setAttribute('data-vehicle-index', vehicleIndex);
+                            openModal('edit-vehicle-modal');
+                        }
+                    }).catch(error => {
+                        alert('Error loading vehicle data: ' + error.message);
+                    });
+                });
+            });
+
+            document.querySelectorAll('#fleet-list .remove-vehicle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const vehicleIndex = btn.getAttribute('data-vehicle-index');
+                    if (confirm('Are you sure you want to remove this vehicle from your fleet?')) {
+                        db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).once('value', snapshot => {
+                            const vehicle = snapshot.val();
+                            if (vehicle.driverId) {
+                                db.ref(`users/owners/${userId}/drivers/${vehicle.driverId}`).update({
+                                    vehicleId: ''
+                                }).catch(error => {
+                                    alert('Error deallocating driver: ' + error.message);
+                                });
+                            }
+                            db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).remove()
+                                .then(() => {
+                                    updateFleetOverview();
+                                    alert('Vehicle removed successfully!');
+                                })
+                                .catch(error => {
+                                    alert('Error removing vehicle: ' + error.message);
+                                });
+                        });
+                    }
+                });
+            });
+
+            document.getElementById('confirm-edit-vehicle').addEventListener('click', () => {
+                const vehicleIndex = document.getElementById('confirm-edit-vehicle').getAttribute('data-vehicle-index');
+                const make = document.getElementById('edit-vehicle-make').value;
+                const model = document.getElementById('edit-vehicle-model').value;
+                const year = document.getElementById('edit-vehicle-year').value;
+                const color = document.getElementById('edit-vehicle-color').value;
+                const vin = document.getElementById('edit-vehicle-vin').value;
+                const engine = document.getElementById('edit-vehicle-engine').value;
+                const reg = document.getElementById('edit-vehicle-reg').value;
+                const licenseExpiry = document.getElementById('edit-vehicle-license-expiry').value;
+                if (make && model && year && color && vin && engine && reg && licenseExpiry && vehicleIndex) {
+                    db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}`).update({
+                        make: make,
+                        model: model,
+                        year: year,
+                        color: color,
+                        vin: vin,
+                        engine: engine,
+                        reg: reg,
+                        licenseExpiry: licenseExpiry
+                    }).then(() => {
+                        updateFleetOverview();
+                        closeModal('edit-vehicle-modal');
+                        alert('Vehicle updated successfully!');
+                    }).catch(error => {
+                        alert('Error updating vehicle: ' + error.message);
+                    });
+                } else {
+                    alert('Please fill in all fields');
+                }
+            });
+
+            observer.disconnect();
+        });
+        observer.observe(fleetList, { childList: true, subtree: true });
+    } catch (error) {
+        console.error('Error loading vehicles:', error);
+        fleetList.innerHTML = '<p>Error loading vehicles. Please try again.</p>';
+        fleetVehicles.innerHTML = '<p>Error loading vehicles. Please try again.</p>';
+        alert('Error loading vehicles: ' + error.message);
+    }
+}
+        // Update maintenance dropdown
+        function updateMaintenanceDropdown() {
+            const select = document.getElementById('maintenance-vehicle');
+            select.innerHTML = '';
+            db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
+                const vehicles = snapshot.val() || [];
+                Object.entries(vehicles).forEach(([index, vehicle]) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${vehicle.make || ''} ${vehicle.model} (${vehicle.reg})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // Update driver management
+        function updateDriverManagement() {
+    if (!userId) {
+        console.log('No userId, skipping updateDriverManagement');
+        return;
+    }
+    console.log('Fetching drivers for owner:', userId);
+    const driverList = document.getElementById('driver-list');
+    const driverSelect = document.getElementById('manage-driver-select');
+    if (!driverList || !driverSelect) {
+        console.error('Driver list or select DOM elements not found');
+        return;
+    }
+    driverList.innerHTML = '<p>Loading drivers...</p>';
+    driverSelect.innerHTML = '';
+    db.ref(`users/owners/${userId}/drivers`).on('value', snapshot => {
+        const drivers = snapshot.val() || {};
+        console.log('Drivers data:', drivers);
+        driverList.innerHTML = '';
+        if (Object.keys(drivers).length === 0) {
+            driverList.innerHTML = '<p>No drivers found.</p>';
+            return;
+        }
+        Object.entries(drivers).forEach(([index, driver]) => {
+            db.ref(`users/drivers/${driver.driverId}`).once('value', driverSnap => {
+                const driverData = driverSnap.val() || {};
+                console.log(`Driver ${driver.driverId} data:`, driverData);
+                let status = driverData.onDuty ? 'On Duty' : 'Off Duty';
+                if (driverData.onDuty && !driver.vehicleId) {
+                    status = 'Off Duty (No Vehicle)';
+                }
+                const statusColor = driverData.onDuty && driver.vehicleId ? 'var(--success)' : 'var(--danger)';
+                const route = driverData.currentRoute || 'N/A';
+                let earningsToday = 0;
+                const today = new Date().toISOString().slice(0, 10);
+                if (driverData.trips) {
+                    Object.values(driverData.trips).forEach(trip => {
+                        if (trip.timestamp && trip.timestamp.slice(0, 10) === today) {
+                            earningsToday += Number(trip.amount) || 0;
+                        }
+                    });
+                }
+                db.ref(`users/owners/${userId}/vehicles`).once('value', vehicleSnap => {
+                    const vehicles = vehicleSnap.val() || {};
+                    const allocatedVehicle = driverData.vehicleId ? vehicles[driverData.vehicleId] : null;
+                    const vehicleInfo = allocatedVehicle ? `${allocatedVehicle.make || ''} ${allocatedVehicle.model || ''} (${allocatedVehicle.reg || ''})` : 'Unassigned';
+                    const driverHtml = `
+                        <div class="list-item" data-driver-index="${index}">
+                            <div class="item-info">
+                                <div class="item-icon"><i class="fas fa-user"></i></div>
+                                <div class="item-details">
+                                    <h4>${driverData.name || driver.name || 'Unknown'}</h4>
+                                    <p>${driverData.email || driver.email || 'N/A'}</p>
+                                    <p style="color:${statusColor};font-weight:600;">${status}</p>
+                                    <p><strong>Current Route:</strong> ${route}</p>
+                                    <p><strong>Allocated Vehicle:</strong> ${vehicleInfo}</p>
+                                    <p><strong>Today's Earnings:</strong> R ${earningsToday.toFixed(2)}</p>
+                                </div>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
+                                <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
+                            </div>
+                        </div>`;
+                    driverList.innerHTML += driverHtml;
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = driverData.name || driver.name || 'Unknown';
+                    driverSelect.appendChild(option);
+                }).catch(error => {
+                    console.error('Error fetching vehicles for driver:', error);
+                    driverList.innerHTML = '<p>Error loading driver data. Please try again.</p>';
+                });
+            }, error => {
+                console.error(`Error fetching driver ${driver.driverId}:`, error.message);
+                const driverHtml = `
+                    <div class="list-item" data-driver-index="${index}">
+                        <div class="item-info">
+                            <div class="item-icon"><i class="fas fa-user"></i></div>
+                            <div class="item-details">
+                                <h4>${driver.name || 'Unknown'}</h4>
+                                <p>${driver.email || 'N/A'}</p>
+                                <p style="color:var(--danger);font-weight:600;">Data Unavailable</p>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
+                            <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
+                        </div>
+                    </div>`;
+                driverList.innerHTML += driverHtml;
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = driver.name || 'Unknown';
+                driverSelect.appendChild(option);
+            });
+        });
+
+        updateDriverBehavior();
+
+        const observer = new MutationObserver(() => {
+            document.querySelectorAll('.edit-driver-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const driverIndex = btn.getAttribute('data-driver-index');
+                    db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
+                        const driver = snapshot.val();
+                        if (driver) {
+                            document.getElementById('edit-driver-name').value = driver.name || '';
+                            document.getElementById('edit-driver-email').value = driver.email || '';
+                            document.getElementById('confirm-edit-driver').setAttribute('data-driver-index', driverIndex);
+                            openModal('edit-driver-modal');
+                        }
+                    }).catch(error => {
+                        alert('Error loading driver data: ' + error.message);
+                    });
+                });
+            });
+
+            document.querySelectorAll('.remove-driver-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const driverIndex = btn.getAttribute('data-driver-index');
+                    if (confirm('Are you sure you want to remove this driver from your fleet?')) {
+                        db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
+                            const driver = snapshot.val();
+                            if (driver.vehicleId) {
+                                db.ref(`users/owners/${userId}/vehicles/${driver.vehicleId}`).update({
+                                    driverId: ''
+                                }).catch(error => {
+                                    alert('Error deallocating vehicle: ' + error.message);
+                                });
+                            }
+                            db.ref(`users/owners/${userId}/drivers/${driverIndex}`).remove()
+                                .then(() => {
+                                    updateDriverManagement();
+                                    updateFleetOverview(); // Ensure fleet is refreshed after driver removal
+                                    alert('Driver removed successfully!');
+                                })
+                                .catch(error => {
+                                    alert('Error removing driver: ' + error.message);
+                                });
+                        });
+                    }
+                });
+            });
+            observer.disconnect();
+        });
+        observer.observe(driverList, { childList: true, subtree: true });
+    }, error => {
+        console.error('Error loading drivers:', error);
+        driverList.innerHTML = '<p>Error loading drivers. Please try again.</p>';
+        alert('Error loading drivers: ' + error.message);
+    });
+}
+        // Update driver behavior
+        function updateDriverBehavior() {
+            const driverSelect = document.getElementById('manage-driver-select');
+            const behaviorList = document.getElementById('driver-behavior');
+            behaviorList.innerHTML = '';
+            if (!driverSelect.value) return;
+            db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior`).once('value', snapshot => {
+                const behaviors = snapshot.val() || {};
+                Object.entries(behaviors).forEach(([index, behavior]) => {
+                    const behaviorHtml = `
+                        <div class="list-item" data-behavior-index="${index}">
+                            <div class="item-info">
+                                <div class="item-icon"><i class="fas fa-comment"></i></div>
+                                <div class="item-details">
+                                    <h4>${behavior.subject || 'Comment'}</h4>
+                                    <p>${behavior.message || ''} - ${behavior.time || ''}</p>
+                                    <p><strong>Passenger Email:</strong> ${behavior.passengerEmail || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-success resolve-comment-btn" data-comment-id="${index}">Resolve</button>
+                            <button class="btn btn-secondary reply-comment-btn" data-email="${behavior.passengerEmail}">Reply</button>
+                        </div>`;
+                    behaviorList.innerHTML += behaviorHtml;
+                });
+
+                document.querySelectorAll('.reply-comment-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const email = btn.dataset.email;
+                        if (email && email !== 'N/A') {
+                            window.location.href = `mailto:${email}?subject=Reply from TaxiDrive Owner`;
+                        } else {
+                            alert('No passenger email available.');
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.resolve-comment-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const commentId = btn.dataset.commentId;
+                        db.ref(`users/owners/${userId}/drivers/${driverSelect.value}/behavior/${commentId}`).remove();
+                        updateDriverBehavior();
+                    });
+                });
+            });
+        }
+
+        // Modal functionality
+        const modals = document.querySelectorAll('.modal');
+        const closeModalButtons = document.querySelectorAll('.modal-close');
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                button.closest('.modal').style.display = 'none';
+            });
+        });
+
+        modals.forEach(modal => {
+            modal.addEventListener('click', e => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+
+        // Bottom navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                const navAction = item.dataset.nav;
+                if (navAction === 'home') {
+                    window.scrollTo(0, 0);
+                } else if (navAction === 'earnings') {
+                    updateEarningsHistory();
+                    openModal('earnings-history-modal');
+                } else if (navAction === 'fleet') {
+                    updateFleetOverview();
+                    openModal('fleet-overview-modal');
+                } else if (navAction === 'profile') {
+                    openModal('login-modal');
+                }
+            });
+        });
+
+        // Earnings history
+        document.getElementById('earnings-history-btn').addEventListener('click', () => {
+            updateEarningsHistory();
+            openModal('earnings-history-modal');
+        });
+
+        document.getElementById('earnings-period').addEventListener('change', (e) => {
+            updateEarningsHistory(e.target.value);
+        });
+
+        // Fleet overview
+        document.getElementById('fleet-overview-btn').addEventListener('click', async () => {
+    await updateFleetOverview();
+    openModal('fleet-overview-modal');
+});
+
+        document.getElementById('add-vehicle-btn').addEventListener('click', () => {
+            openModal('add-vehicle-modal');
+        });
+
+        document.getElementById('confirm-add-vehicle').addEventListener('click', () => {
+            const make = document.getElementById('vehicle-make').value;
+            const model = document.getElementById('vehicle-model').value;
+            const year = document.getElementById('vehicle-year').value;
+            const color = document.getElementById('vehicle-color').value;
+            const vin = document.getElementById('vehicle-vin').value;
+            const engine = document.getElementById('vehicle-engine').value;
+            const reg = document.getElementById('vehicle-reg').value;
+            const licenseExpiry = document.getElementById('vehicle-license-expiry').value;
+            if (make && model && year && color && vin && engine && reg && licenseExpiry) {
+                db.ref(`users/owners/${userId}/vehicles`).push({
+                    make: make,
+                    model: model,
+                    year: year,
+                    color: color,
+                    vin: vin,
+                    engine: engine,
+                    reg: reg,
+                    licenseExpiry: licenseExpiry,
+                    driverId: ''
+                }).then(() => {
+                    updateFleetOverview();
+                    closeModal('add-vehicle-modal');
+                    alert('Vehicle added successfully!');
+                }).catch(error => {
+                    alert('Error adding vehicle: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        document.getElementById('maintain-vehicle-btn').addEventListener('click', () => {
+            updateMaintenanceDropdown();
+            openModal('maintain-vehicle-modal');
+        });
+
+        document.getElementById('confirm-maintenance').addEventListener('click', () => {
+            const vehicleIndex = document.getElementById('maintenance-vehicle').value;
+            const type = document.getElementById('maintenance-type').value;
+            const amount = parseFloat(document.getElementById('maintenance-amount').value);
+            const description = document.getElementById('maintenance-description').value;
+            if (vehicleIndex && type && amount && description) {
+                db.ref(`users/owners/${userId}/vehicles/${vehicleIndex}/maintenance`).push({
+                    type: type,
+                    amount: amount,
+                    description: description,
+                    date: new Date().toLocaleString()
+                }).then(() => {
+                    closeModal('maintain-vehicle-modal');
+                    alert('Maintenance logged successfully!');
+                }).catch(error => {
+                    alert('Error logging maintenance: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        // Driver management
+        document.getElementById('driver-management-btn').addEventListener('click', () => {
+            updateDriverManagement();
+            openModal('driver-management-modal');
+        });
+
+        document.getElementById('add-driver-btn').addEventListener('click', () => {
+            openModal('add-driver-modal');
+        });
+
+        document.getElementById('confirm-add-driver').addEventListener('click', async () => {
+    const name = document.getElementById('driver-name').value;
+    const surname = document.getElementById('driver-surname').value;
+    const cell = document.getElementById('driver-cell').value;
+    const licenseType = document.getElementById('driver-license-type').value;
+    const licenseExpiry = document.getElementById('driver-license-expiry').value;
+    const username = document.getElementById('driver-username').value;
+    const password = document.getElementById('driver-password').value;
+
+    if (name && surname && cell && licenseType && licenseExpiry && username && password) {
+        try {
+            // Create driver account
+            const userCredential = await auth.createUserWithEmailAndPassword(username, password);
+            const driverId = userCredential.user.uid;
+
+            // Store driver data
+            await db.ref(`users/drivers/${driverId}`).set({
+                name: name + ' ' + surname,
+                surname: surname,
+                cell: cell,
+                licenseType: licenseType,
+                licenseExpiry: licenseExpiry,
+                email: username,
+                onDuty: false,
+                currentRoute: '',
+                trips: [],
+                behavior: [],
+                vehicle: { ownerId: userId }
+            });
+
+            // Add driver to owner's drivers list
+            await db.ref(`users/owners/${userId}/drivers`).push({
+                driverId: driverId,
+                name: name + ' ' + surname,
+                email: username,
+                onDuty: false,
+                behavior: []
+            });
+
+            // Update UI
+            closeModal('add-driver-modal');
+            await updateDriverManagement();
+            await updateFleetOverview(); // Ensure fleet is refreshed after driver addition
+            alert('Driver added successfully!');
+        } catch (error) {
+            alert('Error creating driver account: ' + error.message);
+            console.error('Error in confirm-add-driver:', error);
+        }
+    } else {
+        alert('Please fill in all fields');
+    }
+});
+
+        document.getElementById('manage-driver-btn').addEventListener('click', () => {
+            updateDriverManagement();
+            openModal('manage-driver-modal');
+        });
+
+        document.getElementById('manage-driver-select').addEventListener('change', () => {
+            updateDriverBehavior();
+        });
+
+        document.getElementById('save-driver-notes').addEventListener('click', () => {
+            const driverIndex = document.getElementById('manage-driver-select').value;
+            const notes = document.getElementById('driver-notes').value;
+            if (driverIndex && notes) {
+                db.ref(`users/owners/${userId}/drivers/${driverIndex}/notes`).push({
+                    note: notes,
+                    time: new Date().toLocaleString()
+                }).then(() => {
+                    closeModal('manage-driver-modal');
+                    alert('Notes saved successfully!');
+                }).catch(error => {
+                    alert('Error saving notes: ' + error.message);
+                });
+            } else {
+                alert('Please enter notes');
+            }
+        });
+
+        document.getElementById('confirm-edit-driver').addEventListener('click', () => {
+            const driverIndex = document.getElementById('confirm-edit-driver').getAttribute('data-driver-index');
+            const name = document.getElementById('edit-driver-name').value;
+            if (name && driverIndex) {
+                db.ref(`users/owners/${userId}/drivers/${driverIndex}`).update({
+                    name: name
+                }).then(() => {
+                    db.ref(`users/drivers/${driverIndex}/name`).set(name);
+                    updateDriverManagement();
+                    closeModal('edit-driver-modal');
+                    alert('Driver updated successfully!');
+                }).catch(error => {
+                    alert('Error updating driver: ' + error.message);
+                });
+            } else {
+                alert('Please enter a name');
+            }
+        });
+
+        // Withdraw funds
+        document.getElementById('withdraw-btn').addEventListener('click', () => {
+            openModal('withdraw-modal');
+        });
+
+        document.getElementById('confirm-withdraw').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            if (amount > 0 && amount <= walletBalance) {
+                walletBalance -= amount;
+                db.ref(`users/owners/${userId}/walletBalance`).set(walletBalance).then(() => {
+                    document.getElementById('wallet-balance').textContent = `R ${walletBalance.toFixed(2)}`;
+                    closeModal('withdraw-modal');
+                    alert('Withdrawal successful!');
+                });
+            } else {
+                alert('Invalid amount or insufficient funds');
+            }
+        });
+
+        // Allocate vehicle
+        document.getElementById('allocate-vehicle-btn').addEventListener('click', () => {
+            const vehicleSelect = document.getElementById('allocate-vehicle-select');
+            vehicleSelect.innerHTML = '';
+            db.ref(`users/owners/${userId}/vehicles`).once('value', snapshot => {
+                const vehicles = snapshot.val() || {};
+                Object.entries(vehicles).forEach(([key, vehicle]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = `${vehicle.make || ''} ${vehicle.model} (${vehicle.reg})`;
+                    vehicleSelect.appendChild(option);
+                });
+            });
+
+            const driverSelect = document.getElementById('allocate-driver-select');
+            driverSelect.innerHTML = '';
+            db.ref(`users/owners/${userId}/drivers`).once('value', snapshot => {
+                const drivers = snapshot.val() || {};
+                Object.entries(drivers).forEach(([key, driver]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = driver.name;
+                    driverSelect.appendChild(option);
+                });
+            });
+
+            openModal('allocate-vehicle-modal');
+        });
+
+        document.getElementById('confirm-allocate-vehicle').addEventListener('click', () => {
+            const vehicleKey = document.getElementById('allocate-vehicle-select').value;
+            const driverKey = document.getElementById('allocate-driver-select').value;
+            if (vehicleKey && driverKey) {
+                db.ref(`users/owners/${userId}/vehicles/${vehicleKey}/driverId`).set(driverKey)
+                    .then(() => {
+                        db.ref(`users/owners/${userId}/drivers/${driverKey}/vehicleId`).set(vehicleKey);
+                        closeModal('allocate-vehicle-modal');
+                        updateFleetOverview();
+                        updateDriverManagement();
+                        alert('Vehicle allocated to driver!');
+                    }).catch(error => {
+                        alert('Error allocating vehicle: ' + error.message);
+                    });
+            } else {
+                alert('Please select both vehicle and driver');
+            }
+        });
+
+        // Authentication
+        auth.onAuthStateChanged(async (user) => {
+            console.log('Auth state changed:', user ? `UID: ${user.uid}, Email: ${user.email}` : 'No user');
+            if (user) {
+                isLoggedIn = true;
+                userId = user.uid;
+                console.log('Set userId:', userId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+
+                // Load user data from localStorage first (for immediate display)
+                ownerName = localStorage.getItem('userName') || 'Loading...';
+                userRole = localStorage.getItem('userRole') || 'Owner';
+
+                // Update UI immediately
+                updateUserProfile(ownerName, userRole);
+
+                // Then load fresh data from database
+                await loadUserData();
+
+                // Load owner-specific data
+                db.ref(`users/owners/${userId}`).once('value', snapshot => {
+                    const data = snapshot.val();
+                    console.log('Owner data:', data);
+                    walletBalance = data?.walletBalance || 0;
+                    document.getElementById('wallet-balance').textContent = `R ${Number(walletBalance).toFixed(2)}`;
+                    ownerName = data?.name || ownerName;
+                    if (!data) {
+                        console.log('Creating new owner record for UID:', userId);
+                        db.ref(`users/owners/${userId}`).set({
+                            email: user.email,
+                            name: document.getElementById('signup-name').value || 'Owner',
+                            role: 'Owner',
+                            walletBalance: 0,
+                            vehicles: [],
+                            drivers: []
+                        });
+                    }
+                    updateEarningsHistory();
+                    updateFleetOverview();
+                    updateDriverManagement();
+                }).catch(error => {
+                    console.error('Error fetching owner data:', error.message);
+                });
+            } else {
+                isLoggedIn = false;
+                userId = null;
+                walletBalance = 0;
+                ownerName = '';
+                userRole = 'Owner';
+                document.getElementById('wallet-balance').textContent = 'R 0.00';
+                updateUserProfile('Loading...', 'Owner');
+                console.log('No user logged in at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+            }
+        });
+
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await auth.signOut();
+                    localStorage.clear();
+                    console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                    alert('Logged out successfully!');
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    alert('Error logging out: ' + error.message);
+                }
+            });
+        }
+
+        // Notifications button
+        const notificationsBtn = document.getElementById('notifications-btn');
+        if (notificationsBtn) {
+            notificationsBtn.addEventListener('click', () => {
+                console.log('Notifications clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                alert('Notifications feature coming soon!');
+            });
+        }
+
+        // User profile click
+        const userProfile = document.getElementById('user-profile');
+        if (userProfile) {
+            userProfile.addEventListener('click', () => {
+                console.log('User profile clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                alert(`Profile: ${ownerName}\nRole: ${userRole}\nEmail: ${localStorage.getItem('userEmail') || 'N/A'}`);
+            });
+        }
+
+        document.getElementById('signup-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const name = document.getElementById('signup-name').value;
+            if (email && password && name) {
+                auth.createUserWithEmailAndPassword(email, password).then(userCredential => {
+                    db.ref(`users/owners/${userCredential.user.uid}`).set({
+                        email: email,
+                        name: name,
+                        role: 'Owner',
+                        walletBalance: 0,
+                        vehicles: [],
+                        drivers: []
+                    });
+                    // Store user data in localStorage
+                    localStorage.setItem('userName', name);
+                    localStorage.setItem('userRole', 'Owner');
+                    localStorage.setItem('userEmail', email);
+                    closeModal('login-modal');
+                    alert('Signed up successfully!');
+                }).catch(error => {
+                    alert('Error signing up: ' + error.message);
+                });
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if (email && password) {
+                auth.signInWithEmailAndPassword(email, password).then(() => {
+                    // Store user data in localStorage
+                    localStorage.setItem('userEmail', email);
+                    closeModal('login-modal');
+                    alert('Logged in successfully!');
+                }).catch(error => {
+                    alert('Error logging in: ' + error.message);
+                });
+            } else {
+                alert('Please enter email and password');
+            }
+        });
+
+        document.querySelector('.btn-google').addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then(result => {
+                const user = result.user;
+                const userName = user.displayName || 'Owner';
+                const userEmail = user.email;
+
+                db.ref(`users/owners/${user.uid}`).once('value', snapshot => {
+                    if (!snapshot.exists()) {
+                        db.ref(`users/owners/${user.uid}`).set({
+                            email: userEmail,
+                            name: userName,
+                            role: 'Owner',
+                            walletBalance: 0,
+                            vehicles: [],
+                            drivers: []
+                        });
+                    }
+                    // Store user data in localStorage
+                    localStorage.setItem('userName', userName);
+                    localStorage.setItem('userRole', 'Owner');
+                    localStorage.setItem('userEmail', userEmail);
+                    closeModal('login-modal');
+                    alert('Logged in with Google!');
+                });
+            }).catch(error => {
+                alert('Error logging in with Google: ' + error.message);
+            });
+        });
+
+        // Initialize application
+        window.onload = function () {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    console.log('Initializing app for user:', user.uid);
+                    updateEarningsHistory();
+                    updateFleetOverview();
+                    updateDriverManagement();
+                    loadAssociationData();
+                } else {
+                    console.log('No user authenticated, skipping initialization');
+                }
+            });
+        };
+
+        // Load association data and member approval status
+        async function loadAssociationData() {
+            if (!userId) return;
+            try {
+                const associationSnapshot = await db.ref(`associations`).orderByChild('ownerId').equalTo(userId).once('value');
+                const associations = associationSnapshot.val();
+                if (!associations) {
+                    console.log('No association found for owner:', userId);
+                    return;
+                }
+                const associationId = Object.keys(associations)[0];
+                const association = associations[associationId];
+                console.log('Loaded association:', association);
+
+                // Display association info in UI (add UI element if needed)
+                displayAssociationInfo(association);
+
+                // Load pending members for approval
+                const pendingMembersSnapshot = await db.ref(`associations/${associationId}/members`).orderByChild('approvalStatus').equalTo('pending').once('value');
+                const pendingMembers = pendingMembersSnapshot.val();
+                console.log('Pending members:', pendingMembers);
+
+                // Display pending members in UI (add UI element or modal)
+                displayPendingMembers(pendingMembers, associationId);
+            } catch (error) {
+                console.error('Error loading association data:', error);
+            }
+        }
+
+        function displayAssociationInfo(association) {
+            // TODO: Add UI element or modal to show association info
+            console.log('Association Info:', association);
+        }
+
+        function displayPendingMembers(members, associationId) {
+            // TODO: Add UI element or modal to show pending members with approve/reject buttons
+            console.log('Display pending members for association:', associationId, members);
+        }
+
+        function showLoading(elementId) {
+        document.getElementById(elementId).innerHTML = '<p>Loading...</p>';
+        }
+
+        function hideLoading(elementId, content) {
+        document.getElementById(elementId).innerHTML = content;
+        }
+    </script>
 </body>
+
 </html>
