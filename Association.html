@@ -941,6 +941,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js" defer></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" defer></script>
+    <script defer src="js/enhanced-firebase-service.js"></script>
     <script defer>
         // Wait for DOM content to load
         document.addEventListener('DOMContentLoaded', () => {
@@ -1757,8 +1758,16 @@
 
                     async function loadPendingMembers() {
                         try {
-                            const members = await enhancedFirebaseService.fetchPendingMembers();
-                            renderPendingMembers(members);
+                            // Use enhancedFirebaseService if available
+                            if (typeof enhancedFirebaseService !== 'undefined' && enhancedFirebaseService.fetchPendingMembers) {
+                                const members = await enhancedFirebaseService.fetchPendingMembers();
+                                renderPendingMembers(members);
+                            } else {
+                                // Fallback to direct Firebase call
+                                const pendingMembersSnapshot = await db.ref(`associations/${userId}/members`).orderByChild('approvalStatus').equalTo('pending').once('value');
+                                const members = pendingMembersSnapshot.val();
+                                renderPendingMembers(members);
+                            }
                         } catch (error) {
                             console.error('Error loading pending members:', error);
                             pendingMembersList.innerHTML = '<p style="color: red;">Failed to load pending members.</p>';
