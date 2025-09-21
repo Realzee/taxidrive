@@ -849,6 +849,45 @@
             console.log('Map container initialized at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
             // Add map initialization code here if using a mapping library
 
+            // Load association data and member approval status
+            async function loadAssociationData() {
+                if (!userId) return;
+                try {
+                    const associationSnapshot = await db.ref(`associations`).orderByChild('ownerId').equalTo(userId).once('value');
+                    const associations = associationSnapshot.val();
+                    if (!associations) {
+                        console.log('No association found for owner:', userId);
+                        return;
+                    }
+                    const associationId = Object.keys(associations)[0];
+                    const association = associations[associationId];
+                    console.log('Loaded association:', association);
+
+                    // Display association info in UI (add UI element if needed)
+                    displayAssociationInfo(association);
+
+                    // Load member approval status if needed
+                    const memberSnapshot = await db.ref(`associations/${associationId}/members/${userId}`).once('value');
+                    const member = memberSnapshot.val();
+                    console.log('Member info:', member);
+
+                    // Display member approval status in UI (add UI element or modal)
+                    displayMemberApprovalStatus(member);
+                } catch (error) {
+                    console.error('Error loading association data:', error);
+                }
+            }
+
+            function displayAssociationInfo(association) {
+                // TODO: Add UI element or modal to show association info
+                console.log('Association Info:', association);
+            }
+
+            function displayMemberApprovalStatus(member) {
+                // TODO: Add UI element or modal to show member approval status
+                console.log('Member Approval Status:', member?.approvalStatus);
+            }
+
             // Logout button
             const logoutBtn = document.getElementById('logout-btn');
             if (logoutBtn) {
