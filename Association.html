@@ -977,6 +977,9 @@
                 return;
             }
 
+            // Initialize enhancedFirebaseService instance
+            window.enhancedFirebaseService = new EnhancedFirebaseService();
+
             let userId = null;
             let userName = null;
             let userRole = null;
@@ -1047,45 +1050,48 @@
                     return;
                 }
 
-                try {
-                    const statsSnapshot = await db.ref(`associations/${userId}/stats`).once('value');
-                    const stats = statsSnapshot.val() || {};
-                    document.getElementById('stat-vehicles').textContent = stats.registeredVehicles || 42;
-                    document.getElementById('stat-drivers').textContent = stats.registeredDrivers || 65;
-                    document.getElementById('stat-routes').textContent = stats.activeRoutes || 8;
-                    document.getElementById('stat-fees').textContent = `R ${stats.associationFees || 4250}`;
+            try {
+                const statsSnapshot = await db.ref(`associations/${userId}/stats`).once('value');
+                const stats = statsSnapshot.val() || {};
 
-                    const routesSnapshot = await db.ref(`associations/${userId}/routes`).once('value');
-                    const routes = routesSnapshot.val() || {};
-                    const routeList = document.querySelectorAll('#route-card .list-item[data-route-id]');
-                    Object.entries(routes).forEach(([id, route], index) => {
-                        if (routeList[index]) {
-                            routeList[index].querySelector('h4').textContent = route.name || 'Unknown Route';
-                            routeList[index].querySelector('p').textContent = `Fare: R ${route.fare || 0} | ${route.vehicles || 0} vehicles`;
-                            const statusElement = routeList[index].querySelector('.status-indicator');
-                            statusElement.textContent = route.status || 'Active';
-                            statusElement.className = `status-indicator ${route.status === 'Pending' ? 'status-pending' : 'status-active'}`;
-                        }
-                    });
+                // Update dashboard stats with association-level data
+                document.getElementById('stat-vehicles').textContent = stats.totalVehicles || stats.registeredVehicles || 0;
+                document.getElementById('stat-drivers').textContent = stats.totalDrivers || stats.registeredDrivers || 0;
+                document.getElementById('stat-routes').textContent = stats.totalActiveRoutes || stats.activeRoutes || 0;
+                document.getElementById('stat-fees').textContent = `R ${stats.associationFees || 0}`;
+                document.getElementById('stat-owners').textContent = stats.totalOwners || 0;
 
-                    const disputesSnapshot = await db.ref(`associations/${userId}/disputes`).once('value');
-                    const disputes = disputesSnapshot.val() || {};
-                    const disputeList = document.querySelectorAll('#dispute-card .list-item[data-dispute-id]');
-                    Object.entries(disputes).forEach(([id, dispute], index) => {
-                        if (disputeList[index]) {
-                            disputeList[index].querySelector('h4').textContent = dispute.title || 'Unknown Dispute';
-                            disputeList[index].querySelector('p').textContent = `Vehicle: ${dispute.vehicle || 'N/A'} | Driver: ${dispute.driver || 'N/A'}`;
-                            disputeList[index].querySelector('.status-indicator').textContent = dispute.status || 'Review';
-                            disputeList[index].querySelector('.status-indicator').className = `status-indicator status-pending`;
-                        }
-                    });
+                const routesSnapshot = await db.ref(`associations/${userId}/routes`).once('value');
+                const routes = routesSnapshot.val() || {};
+                const routeList = document.querySelectorAll('#route-card .list-item[data-route-id]');
+                Object.entries(routes).forEach(([id, route], index) => {
+                    if (routeList[index]) {
+                        routeList[index].querySelector('h4').textContent = route.name || 'Unknown Route';
+                        routeList[index].querySelector('p').textContent = `Fare: R ${route.fare || 0} | ${route.vehicles || 0} vehicles`;
+                        const statusElement = routeList[index].querySelector('.status-indicator');
+                        statusElement.textContent = route.status || 'Active';
+                        statusElement.className = `status-indicator ${route.status === 'Pending' ? 'status-pending' : 'status-active'}`;
+                    }
+                });
 
-                    // Load route statistics
-                    await loadRouteStatistics();
-                } catch (error) {
-                    console.error('Error loading dashboard data:', error.message);
-                    alert('Failed to load data. Check console for details.');
-                }
+                const disputesSnapshot = await db.ref(`associations/${userId}/disputes`).once('value');
+                const disputes = disputesSnapshot.val() || {};
+                const disputeList = document.querySelectorAll('#dispute-card .list-item[data-dispute-id]');
+                Object.entries(disputes).forEach(([id, dispute], index) => {
+                    if (disputeList[index]) {
+                        disputeList[index].querySelector('h4').textContent = dispute.title || 'Unknown Dispute';
+                        disputeList[index].querySelector('p').textContent = `Vehicle: ${dispute.vehicle || 'N/A'} | Driver: ${dispute.driver || 'N/A'}`;
+                        disputeList[index].querySelector('.status-indicator').textContent = dispute.status || 'Review';
+                        disputeList[index].querySelector('.status-indicator').className = `status-indicator status-pending`;
+                    }
+                });
+
+                // Load route statistics
+                await loadRouteStatistics();
+            } catch (error) {
+                console.error('Error loading dashboard data:', error.message);
+                alert('Failed to load data. Check console for details.');
+            }
             }
 
             function setupEventListeners() {
