@@ -54,7 +54,7 @@ function initApp() {
         const now = new Date();
         const expiryThreshold = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000); // 60 days from now
 
-        db.ref(`users/owners/${userId}/drivers`).once('value', snapshot => {
+        db.ref(`owners/${userId}/drivers`).once('value', snapshot => {
             const drivers = snapshot.val() || {};
             Object.entries(drivers).forEach(([driverId, driver]) => {
                 if (driver.licenceExpiry) {
