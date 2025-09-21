@@ -1847,11 +1847,51 @@
                     updateEarningsHistory();
                     updateFleetOverview();
                     updateDriverManagement();
+                    loadAssociationData();
                 } else {
                     console.log('No user authenticated, skipping initialization');
                 }
             });
         };
+
+        // Load association data and member approval status
+        async function loadAssociationData() {
+            if (!userId) return;
+            try {
+                const associationSnapshot = await db.ref(`associations`).orderByChild('ownerId').equalTo(userId).once('value');
+                const associations = associationSnapshot.val();
+                if (!associations) {
+                    console.log('No association found for owner:', userId);
+                    return;
+                }
+                const associationId = Object.keys(associations)[0];
+                const association = associations[associationId];
+                console.log('Loaded association:', association);
+
+                // Display association info in UI (add UI element if needed)
+                displayAssociationInfo(association);
+
+                // Load pending members for approval
+                const pendingMembersSnapshot = await db.ref(`associations/${associationId}/members`).orderByChild('approvalStatus').equalTo('pending').once('value');
+                const pendingMembers = pendingMembersSnapshot.val();
+                console.log('Pending members:', pendingMembers);
+
+                // Display pending members in UI (add UI element or modal)
+                displayPendingMembers(pendingMembers, associationId);
+            } catch (error) {
+                console.error('Error loading association data:', error);
+            }
+        }
+
+        function displayAssociationInfo(association) {
+            // TODO: Add UI element or modal to show association info
+            console.log('Association Info:', association);
+        }
+
+        function displayPendingMembers(members, associationId) {
+            // TODO: Add UI element or modal to show pending members with approve/reject buttons
+            console.log('Display pending members for association:', associationId, members);
+        }
     </script>
 </body>
 
