@@ -1738,6 +1738,7 @@
                     localStorage.clear();
                     console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
                     alert('Logged out successfully!');
+                    window.location.href = 'index.html';
                 } catch (error) {
                     console.error('Logout error:', error);
                     alert('Error logging out: ' + error.message);

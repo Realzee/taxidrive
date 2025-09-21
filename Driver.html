@@ -1102,7 +1102,8 @@ const firebaseConfig = {
                     await auth.signOut();
                     localStorage.clear();
                     console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-                    showConfirmationModal('Logout Successful', 'You have been logged out successfully!');
+                    alert('Logged out successfully!');
+                    window.location.href = 'index.html';
                 } catch (error) {
                     console.error('Logout error:', error);
                     showConfirmationModal('Logout Error', 'Error logging out: ' + error.message);
