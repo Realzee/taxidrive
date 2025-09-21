@@ -996,12 +996,9 @@
 
         // Update fleet overview
         async function updateFleetOverview() {
-        showLoading('fleet-list');
-        showLoading('fleet-vehicles');         
-            console.log('updateFleetOverview called with userId:', userId);
-    if (Object.keys(vehicles).length === 0) {
-        hideLoading('fleet-list', '<p>No vehicles found.</p>');
-        hideLoading('fleet-vehicles', '<p>No vehicles found.</p>');
+    console.log('updateFleetOverview called with userId:', userId);
+    if (!userId) {
+        console.warn('No userId, skipping updateFleetOverview');
         return;
     }
 
@@ -1218,157 +1215,141 @@
 
         // Update driver management
         function updateDriverManagement() {
-    if (!userId) {
-        console.log('No userId, skipping updateDriverManagement');
-        return;
-    }
-    console.log('Fetching drivers for owner:', userId);
-    const driverList = document.getElementById('driver-list');
-    const driverSelect = document.getElementById('manage-driver-select');
-    if (!driverList || !driverSelect) {
-        console.error('Driver list or select DOM elements not found');
-        return;
-    }
-    driverList.innerHTML = '<p>Loading drivers...</p>';
-    driverSelect.innerHTML = '';
-    db.ref(`users/owners/${userId}/drivers`).on('value', snapshot => {
-        const drivers = snapshot.val() || {};
-        console.log('Drivers data:', drivers);
-        driverList.innerHTML = '';
-        if (Object.keys(drivers).length === 0) {
-            driverList.innerHTML = '<p>No drivers found.</p>';
-            return;
-        }
-        Object.entries(drivers).forEach(([index, driver]) => {
-            db.ref(`users/drivers/${driver.driverId}`).once('value', driverSnap => {
-                const driverData = driverSnap.val() || {};
-                console.log(`Driver ${driver.driverId} data:`, driverData);
-                let status = driverData.onDuty ? 'On Duty' : 'Off Duty';
-                if (driverData.onDuty && !driver.vehicleId) {
-                    status = 'Off Duty (No Vehicle)';
-                }
-                const statusColor = driverData.onDuty && driver.vehicleId ? 'var(--success)' : 'var(--danger)';
-                const route = driverData.currentRoute || 'N/A';
-                let earningsToday = 0;
-                const today = new Date().toISOString().slice(0, 10);
-                if (driverData.trips) {
-                    Object.values(driverData.trips).forEach(trip => {
-                        if (trip.timestamp && trip.timestamp.slice(0, 10) === today) {
-                            earningsToday += Number(trip.amount) || 0;
+            if (!userId) {
+                console.log('No userId, skipping updateDriverManagement');
+                return;
+            }
+            console.log('Fetching drivers for owner:', userId);
+            const driverList = document.getElementById('driver-list');
+            const driverSelect = document.getElementById('manage-driver-select');
+            driverList.innerHTML = '';
+            driverSelect.innerHTML = '';
+            db.ref(`users/owners/${userId}/drivers`).on('value', snapshot => {
+                const drivers = snapshot.val() || {};
+                console.log('Drivers data:', drivers);
+                Object.entries(drivers).forEach(([index, driver]) => {
+                    db.ref(`users/drivers/${driver.driverId}`).once('value', driverSnap => {
+                        const driverData = driverSnap.val() || {};
+                        console.log(`Driver ${driver.driverId} data:`, driverData);
+                        let status = driverData.onDuty ? 'On Duty' : 'Off Duty';
+                        if (driverData.onDuty && !driver.vehicleId) {
+                            status = 'Off Duty (No Vehicle)';
                         }
-                    });
-                }
-                db.ref(`users/owners/${userId}/vehicles`).once('value', vehicleSnap => {
-                    const vehicles = vehicleSnap.val() || {};
-                    const allocatedVehicle = driverData.vehicleId ? vehicles[driverData.vehicleId] : null;
-                    const vehicleInfo = allocatedVehicle ? `${allocatedVehicle.make || ''} ${allocatedVehicle.model || ''} (${allocatedVehicle.reg || ''})` : 'Unassigned';
-                    const driverHtml = `
-                        <div class="list-item" data-driver-index="${index}">
-                            <div class="item-info">
-                                <div class="item-icon"><i class="fas fa-user"></i></div>
-                                <div class="item-details">
-                                    <h4>${driverData.name || driver.name || 'Unknown'}</h4>
-                                    <p>${driverData.email || driver.email || 'N/A'}</p>
-                                    <p style="color:${statusColor};font-weight:600;">${status}</p>
-                                    <p><strong>Current Route:</strong> ${route}</p>
-                                    <p><strong>Allocated Vehicle:</strong> ${vehicleInfo}</p>
-                                    <p><strong>Today's Earnings:</strong> R ${earningsToday.toFixed(2)}</p>
-                                </div>
-                            </div>
-                            <div class="item-actions">
-                                <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
-                                <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
-                            </div>
-                        </div>`;
-                    driverList.innerHTML += driverHtml;
-                    const option = document.createElement('option');
-                    option.value = index;
-                    option.textContent = driverData.name || driver.name || 'Unknown';
-                    driverSelect.appendChild(option);
-                }).catch(error => {
-                    console.error('Error fetching vehicles for driver:', error);
-                    driverList.innerHTML = '<p>Error loading driver data. Please try again.</p>';
-                });
-            }, error => {
-                console.error(`Error fetching driver ${driver.driverId}:`, error.message);
-                const driverHtml = `
-                    <div class="list-item" data-driver-index="${index}">
-                        <div class="item-info">
-                            <div class="item-icon"><i class="fas fa-user"></i></div>
-                            <div class="item-details">
-                                <h4>${driver.name || 'Unknown'}</h4>
-                                <p>${driver.email || 'N/A'}</p>
-                                <p style="color:var(--danger);font-weight:600;">Data Unavailable</p>
-                            </div>
-                        </div>
-                        <div class="item-actions">
-                            <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
-                            <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
-                        </div>
-                    </div>`;
-                driverList.innerHTML += driverHtml;
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = driver.name || 'Unknown';
-                driverSelect.appendChild(option);
-            });
-        });
-
-        updateDriverBehavior();
-
-        const observer = new MutationObserver(() => {
-            document.querySelectorAll('.edit-driver-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const driverIndex = btn.getAttribute('data-driver-index');
-                    db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
-                        const driver = snapshot.val();
-                        if (driver) {
-                            document.getElementById('edit-driver-name').value = driver.name || '';
-                            document.getElementById('edit-driver-email').value = driver.email || '';
-                            document.getElementById('confirm-edit-driver').setAttribute('data-driver-index', driverIndex);
-                            openModal('edit-driver-modal');
+                        const statusColor = driverData.onDuty && driver.vehicleId ? 'var(--success)' : 'var(--danger)';
+                        const route = driverData.currentRoute || 'N/A';
+                        let earningsToday = 0;
+                        const today = new Date().toISOString().slice(0, 10);
+                        if (driverData.trips) {
+                            Object.values(driverData.trips).forEach(trip => {
+                                if (trip.timestamp && trip.timestamp.slice(0, 10) === today) {
+                                    earningsToday += Number(trip.amount) || 0;
+                                }
+                            });
                         }
-                    }).catch(error => {
-                        alert('Error loading driver data: ' + error.message);
+                        // Correctly show allocated vehicle on driver management
+                        const allocatedVehicle = driverData.vehicleId ? vehicles[driverData.vehicleId] : null;
+                        const vehicleInfo = allocatedVehicle ? `${allocatedVehicle.make || ''} ${allocatedVehicle.model || ''} (${allocatedVehicle.reg || ''})` : 'Unassigned';
+                        const driverHtml = `
+          <div class="list-item" data-driver-index="${index}">
+            <div class="item-info">
+              <div class="item-icon"><i class="fas fa-user"></i></div>
+              <div class="item-details">
+                <h4>${driverData.name || driver.name || 'Unknown'}</h4>
+                <p>${driverData.email || driver.email || 'N/A'}</p>
+                <p style="color:${statusColor};font-weight:600;">${status}</p>
+                <p><strong>Current Route:</strong> ${route}</p>
+                <p><strong>Allocated Vehicle:</strong> ${vehicleInfo}</p>
+                <p><strong>Today's Earnings:</strong> R ${earningsToday.toFixed(2)}</p>
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
+              <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
+            </div>
+          </div>`;
+                        driverList.innerHTML += driverHtml;
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = driverData.name || driver.name || 'Unknown';
+                        driverSelect.appendChild(option);
+                    }, error => {
+                        console.error(`Error fetching driver ${driver.driverId}:`, error.message);
+                        const driverHtml = `
+          <div class="list-item" data-driver-index="${index}">
+            <div class="item-info">
+              <div class="item-icon"><i class="fas fa-user"></i></div>
+              <div class="item-details">
+                <h4>${driver.name || 'Unknown'}</h4>
+                <p>${driver.email || 'N/A'}</p>
+                <p style="color:var(--danger);font-weight:600;">Data Unavailable</p>
+              </div>
+            </div>
+            <div class="item-actions">
+              <button class="btn btn-secondary edit-driver-btn" data-driver-index="${index}">Edit</button>
+              <button class="btn btn-danger remove-driver-btn" data-driver-index="${index}">Remove</button>
+            </div>
+          </div>`;
+                        driverList.innerHTML += driverHtml;
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = driver.name || 'Unknown';
+                        driverSelect.appendChild(option);
                     });
                 });
-            });
 
-            document.querySelectorAll('.remove-driver-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const driverIndex = btn.getAttribute('data-driver-index');
-                    if (confirm('Are you sure you want to remove this driver from your fleet?')) {
-                        db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
-                            const driver = snapshot.val();
-                            if (driver.vehicleId) {
-                                db.ref(`users/owners/${userId}/vehicles/${driver.vehicleId}`).update({
-                                    driverId: ''
-                                }).catch(error => {
-                                    alert('Error deallocating vehicle: ' + error.message);
+                updateDriverBehavior();
+
+                const observer = new MutationObserver(() => {
+                    document.querySelectorAll('.edit-driver-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const driverIndex = btn.getAttribute('data-driver-index');
+                            db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
+                                const driver = snapshot.val();
+                                if (driver) {
+                                    document.getElementById('edit-driver-name').value = driver.name || '';
+                                    document.getElementById('edit-driver-email').value = driver.email || '';
+                                    document.getElementById('confirm-edit-driver').setAttribute('data-driver-index', driverIndex);
+                                    openModal('edit-driver-modal');
+                                }
+                            }).catch(error => {
+                                alert('Error loading driver data: ' + error.message);
+                            });
+                        });
+                    });
+
+                    document.querySelectorAll('.remove-driver-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const driverIndex = btn.getAttribute('data-driver-index');
+                            if (confirm('Are you sure you want to remove this driver from your fleet?')) {
+                                db.ref(`users/owners/${userId}/drivers/${driverIndex}`).once('value', snapshot => {
+                                    const driver = snapshot.val();
+                                    if (driver.vehicleId) {
+                                        db.ref(`users/owners/${userId}/vehicles/${driver.vehicleId}`).update({
+                                            driverId: ''
+                                        }).catch(error => {
+                                            alert('Error deallocating vehicle: ' + error.message);
+                                        });
+                                    }
+                                    db.ref(`users/owners/${userId}/drivers/${driverIndex}`).remove()
+                                        .then(() => {
+                                            updateDriverManagement();
+                                            alert('Driver removed successfully!');
+                                        })
+                                        .catch(error => {
+                                            alert('Error removing driver: ' + error.message);
+                                        });
                                 });
                             }
-                            db.ref(`users/owners/${userId}/drivers/${driverIndex}`).remove()
-                                .then(() => {
-                                    updateDriverManagement();
-                                    updateFleetOverview(); // Ensure fleet is refreshed after driver removal
-                                    alert('Driver removed successfully!');
-                                })
-                                .catch(error => {
-                                    alert('Error removing driver: ' + error.message);
-                                });
                         });
-                    }
+                    });
+                    observer.disconnect();
                 });
+                observer.observe(driverList, { childList: true, subtree: true });
+            }, error => {
+                alert('Error loading drivers: ' + error.message);
+                console.error('Error loading drivers:', error);
             });
-            observer.disconnect();
-        });
-        observer.observe(driverList, { childList: true, subtree: true });
-    }, error => {
-        console.error('Error loading drivers:', error);
-        driverList.innerHTML = '<p>Error loading drivers. Please try again.</p>';
-        alert('Error loading drivers: ' + error.message);
-    });
-}
+        }
         // Update driver behavior
         function updateDriverBehavior() {
             const driverSelect = document.getElementById('manage-driver-select');
@@ -1932,14 +1913,6 @@
         function displayPendingMembers(members, associationId) {
             // TODO: Add UI element or modal to show pending members with approve/reject buttons
             console.log('Display pending members for association:', associationId, members);
-        }
-
-        function showLoading(elementId) {
-        document.getElementById(elementId).innerHTML = '<p>Loading...</p>';
-        }
-
-        function hideLoading(elementId, content) {
-        document.getElementById(elementId).innerHTML = content;
         }
     </script>
 </body>
