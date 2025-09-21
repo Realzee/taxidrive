@@ -930,6 +930,1739 @@
     <script defer>
         // Wait for DOM content to load
         document.addEventListener('DOMContentLoaded', () => {
+            // Firebase configuration
+            const firebaseConfig = {
+                apiKey: "AIzaSyDF4QoPKP02tFadu2pOVlcZRXaA5NcpmY0",
+                authDomain: "taxidrive-337a3.firebaseapp.com",
+                databaseURL: "https://taxidrive-337a3-default-rtdb.firebaseio.com",
+                projectId: "taxidrive-337a3",
+                storageBucket: "taxidrive-337a3.firebasestorage.app",
+                messagingSenderId: "715498763019",
+                appId: "1:715498763019:web:b9fb152a7d5411ebba680e",
+                measurementId: "G-NB9PMBD7DQ"
+            };
+
+            // Initialize Firebase
+            let firebaseApp = null;
+            let auth = null;
+            let db = null;
+            try {
+                if (typeof firebase === 'undefined') {
+                    throw new Error('Firebase library not loaded');
+                }
+                firebaseApp = firebase.initializeApp(firebaseConfig);
+                auth = firebase.auth();
+                db = firebase.database();
+                console.log('Firebase initialized successfully at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+            } catch (error) {
+                console.error('Firebase initialization error:', error.message);
+                alert('Failed to initialize Firebase. Check console for details.');
+                return;
+            }
+
+            let userId = null;
+            let userName = null;
+            let userRole = null;
+
+            auth?.onAuthStateChanged(async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log('User logged in:', userId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+
+                    // Load user data from localStorage first (for immediate display)
+                    userName = localStorage.getItem('userName') || 'Loading...';
+                    userRole = localStorage.getItem('userRole') || 'Association';
+
+                    // Update UI immediately
+                    updateUserProfile(userName, userRole);
+
+                    // Then load fresh data from database
+                    await loadUserData();
+
+                    loadDashboardData().catch(error => console.error('Auth state change error:', error));
+                    setupEventListeners();
+                } else {
+                    userId = null;
+                    console.log('No user logged in at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                    window.location.href = 'index.html'; // Redirect to login
+                }
+            });
+
+            async function loadUserData() {
+                if (!userId || !db) {
+                    console.warn('User not authenticated or database not initialized');
+                    return;
+                }
+
+                try {
+                    const userSnapshot = await db.ref(`users/${userId}`).once('value');
+                    const userData = userSnapshot.val();
+
+                    if (userData) {
+                        userName = userData.name || userName;
+                        userRole = userData.role || userRole;
+
+                        // Update localStorage with fresh data
+                        localStorage.setItem('userName', userName);
+                        localStorage.setItem('userRole', userRole);
+
+                        // Update UI with fresh data
+                        updateUserProfile(userName, userRole);
+                    }
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                }
+            }
+
+            function updateUserProfile(name, role) {
+                const userNameElement = document.getElementById('user-name');
+                const userRoleElement = document.getElementById('user-role');
+                const userAvatarElement = document.getElementById('user-avatar');
+
+                if (userNameElement) userNameElement.textContent = name;
+                if (userRoleElement) userRoleElement.textContent = role;
+                if (userAvatarElement) userAvatarElement.textContent = name.charAt(0).toUpperCase();
+            }
+
+            async function loadDashboardData() {
+                if (!userId || !db) {
+                    console.warn('User not authenticated or database not initialized');
+                    return;
+                }
+
+                try {
+                    const statsSnapshot = await db.ref(`associations/${userId}/stats`).once('value');
+                    const stats = statsSnapshot.val() || {};
+                    document.getElementById('stat-vehicles').textContent = stats.registeredVehicles || 42;
+                    document.getElementById('stat-drivers').textContent = stats.registeredDrivers || 65;
+                    document.getElementById('stat-routes').textContent = stats.activeRoutes || 8;
+                    document.getElementById('stat-fees').textContent = `R ${stats.associationFees || 4250}`;
+
+                    const routesSnapshot = await db.ref(`associations/${userId}/routes`).once('value');
+                    const routes = routesSnapshot.val() || {};
+                    const routeList = document.querySelectorAll('#route-card .list-item[data-route-id]');
+                    Object.entries(routes).forEach(([id, route], index) => {
+                        if (routeList[index]) {
+                            routeList[index].querySelector('h4').textContent = route.name || 'Unknown Route';
+                            routeList[index].querySelector('p').textContent = `Fare: R ${route.fare || 0} | ${route.vehicles || 0} vehicles`;
+                            const statusElement = routeList[index].querySelector('.status-indicator');
+                            statusElement.textContent = route.status || 'Active';
+                            statusElement.className = `status-indicator ${route.status === 'Pending' ? 'status-pending' : 'status-active'}`;
+                        }
+                    });
+
+                    const disputesSnapshot = await db.ref(`associations/${userId}/disputes`).once('value');
+                    const disputes = disputesSnapshot.val() || {};
+                    const disputeList = document.querySelectorAll('#dispute-card .list-item[data-dispute-id]');
+                    Object.entries(disputes).forEach(([id, dispute], index) => {
+                        if (disputeList[index]) {
+                            disputeList[index].querySelector('h4').textContent = dispute.title || 'Unknown Dispute';
+                            disputeList[index].querySelector('p').textContent = `Vehicle: ${dispute.vehicle || 'N/A'} | Driver: ${dispute.driver || 'N/A'}`;
+                            disputeList[index].querySelector('.status-indicator').textContent = dispute.status || 'Review';
+                            disputeList[index].querySelector('.status-indicator').className = `status-indicator status-pending`;
+                        }
+                    });
+
+                    // Load route statistics
+                    await loadRouteStatistics();
+                } catch (error) {
+                    console.error('Error loading dashboard data:', error.message);
+                    alert('Failed to load data. Check console for details.');
+                }
+            }
+
+            function setupEventListeners() {
+                const addRouteBtn = document.getElementById('add-route-btn');
+                if (addRouteBtn) {
+                    addRouteBtn.addEventListener('click', () => openModal('add-route-modal'));
+                }
+
+                const removeRouteBtn = document.getElementById('remove-route-btn');
+                if (removeRouteBtn) {
+                    removeRouteBtn.addEventListener('click', () => {
+                        const selectedRoute = document.querySelector('#route-card .list-item[data-route-id]:hover');
+                        if (selectedRoute && confirm('Are you sure you want to remove this route?')) {
+                            const routeId = selectedRoute.getAttribute('data-route-id');
+                            db?.ref(`associations/${userId}/routes/${routeId}`).remove()
+                                .then(() => {
+                                    console.log('Route removed:', routeId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                                    loadDashboardData().catch(error => console.error('Reload error:', error));
+                                    alert('Route removed successfully!');
+                                })
+                                .catch(error => console.error('Error removing route:', error.message));
+                        }
+                    });
+                }
+
+                const editFareBtn = document.getElementById('edit-fare-btn');
+                if (editFareBtn) {
+                    editFareBtn.addEventListener('click', () => openModal('edit-fare-modal'));
+                }
+
+                // Enhanced Route Management
+                const manageRoutesBtn = document.getElementById('manage-routes');
+                if (manageRoutesBtn) {
+                    manageRoutesBtn.addEventListener('click', () => openRouteManagementModal());
+                }
+
+                // Initialize route management functionality
+                initializeRouteManagement();
+
+                const addMemberBtn = document.getElementById('add-member-btn');
+                if (addMemberBtn) {
+                    addMemberBtn.addEventListener('click', () => {
+                        console.log('Add Member button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        // Placeholder for add member modal
+                    });
+                }
+
+                const removeMemberBtn = document.getElementById('remove-member-btn');
+                if (removeMemberBtn) {
+                    removeMemberBtn.addEventListener('click', () => {
+                        console.log('Remove Member button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        // Placeholder for remove member logic
+                    });
+                }
+
+                const startVerificationBtn = document.getElementById('start-verification-btn');
+                if (startVerificationBtn) {
+                    startVerificationBtn.addEventListener('click', () => {
+                        console.log('Start Verification button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        // Placeholder for verification logic
+                    });
+                }
+
+                const resolveDisputesBtn = document.getElementById('resolve-disputes-btn');
+                if (resolveDisputesBtn) {
+                    resolveDisputesBtn.addEventListener('click', () => {
+                        console.log('Resolve Disputes button clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        // Placeholder for resolve disputes modal
+                    });
+                }
+
+                const addRouteForm = document.getElementById('add-route-form');
+                if (addRouteForm) {
+                    addRouteForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const routeName = document.getElementById('route-name').value.trim();
+                        const fare = parseFloat(document.getElementById('route-fare').value);
+                        const maxVehicles = parseInt(document.getElementById('route-max-vehicles').value);
+                        if (routeName && !isNaN(fare) && !isNaN(maxVehicles)) {
+                            const newRoute = {
+                                name: routeName,
+                                fare: fare,
+                                vehicles: 0,
+                                status: 'Active',
+                                timestamp: new Date().toISOString()
+                            };
+                            const newRouteRef = db?.ref(`associations/${userId}/routes`).push();
+                            await newRouteRef?.set(newRoute);
+                            console.log('Route added:', newRouteRef?.key, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                            closeModal('add-route-modal');
+                            loadDashboardData().catch(error => console.error('Reload error:', error));
+                            alert('Route added successfully!');
+                        } else {
+                            alert('Please fill all fields with valid values.');
+                        }
+                    });
+                }
+
+                const editFareForm = document.getElementById('edit-fare-form');
+                if (editFareForm) {
+                    editFareForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const routeId = document.getElementById('edit-fare-route').value;
+                        const newFare = parseFloat(document.getElementById('new-fare').value);
+                        if (!isNaN(newFare)) {
+                            await db?.ref(`associations/${userId}/routes/${routeId}`).update({ fare: newFare });
+                            console.log('Fare updated for route:', routeId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                            closeModal('edit-fare-modal');
+                            loadDashboardData().catch(error => console.error('Reload error:', error));
+                            alert('Fare updated successfully!');
+                        } else {
+                            alert('Please enter a valid fare amount.');
+                        }
+                    });
+                }
+
+                // Logout button
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', async () => {
+                        try {
+                            await auth.signOut();
+                            localStorage.clear();
+                            console.log('User logged out at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                            alert('Logged out successfully!');
+                            window.location.href = 'index.html';
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            alert('Error logging out. Please try again.');
+                        }
+                    });
+                }
+
+                // Notifications button
+                const notificationsBtn = document.getElementById('notifications-btn');
+                if (notificationsBtn) {
+                    notificationsBtn.addEventListener('click', () => {
+                        console.log('Notifications clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        alert('Notifications feature coming soon!');
+                    });
+                }
+
+                // User profile click
+                const userProfile = document.getElementById('user-profile');
+                if (userProfile) {
+                    userProfile.addEventListener('click', () => {
+                        console.log('User profile clicked at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                        alert(`Profile: ${userName}\nRole: ${userRole}\nEmail: ${localStorage.getItem('userEmail') || 'N/A'}`);
+                    });
+                }
+
+                const navItems = document.querySelectorAll('.nav-item');
+                if (navItems.length > 0) {
+                    navItems.forEach(item => {
+                        item.addEventListener('click', () => {
+                            document.querySelector('.nav-item.active')?.classList.remove('active');
+                            item.classList.add('active');
+                            const nav = item.getAttribute('data-nav');
+                            console.log('Navigated to:', nav, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+                            // Add navigation logic here (e.g., show/hide sections)
+                        });
+                    });
+                }
+            }
+
+            function openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.style.display = 'flex';
+            }
+
+            async function loadRouteStatistics() {
+                if (!userId || !db) {
+                    console.warn('User not authenticated or database not initialized');
+                    return;
+                }
+
+                try {
+                    const routesSnapshot = await db.ref(`associations/${userId}/routes`).once('value');
+                    const routes = routesSnapshot.val() || {};
+
+                    // Calculate statistics
+                    let totalRevenue = 0;
+                    let totalTrips = 0;
+                    let totalOccupancy = 0;
+                    let routeCount = 0;
+                    let topRoute = { name: 'None', revenue: 0 };
+
+                    Object.values(routes).forEach(route => {
+                        if (route.performance) {
+                            totalRevenue += route.performance.totalRevenue || 0;
+                            totalTrips += route.performance.totalTrips || 0;
+                            totalOccupancy += route.performance.averageOccupancy || 0;
+                            routeCount++;
+
+                            // Check if this is the top route
+                            if (route.performance.totalRevenue > topRoute.revenue) {
+                                topRoute = {
+                                    name: route.name || 'Unknown',
+                                    revenue: route.performance.totalRevenue
+                                };
+                            }
+                        }
+                    });
+
+                    const averageOccupancy = routeCount > 0 ? totalOccupancy / routeCount : 0;
+
+                    // Update UI
+                    document.getElementById('stat-total-revenue').textContent = `R ${totalRevenue.toLocaleString()}`;
+                    document.getElementById('stat-total-trips').textContent = totalTrips.toLocaleString();
+                    document.getElementById('stat-avg-occupancy').textContent = `${Math.round(averageOccupancy)}%`;
+                    document.getElementById('stat-top-route').textContent = topRoute.name.length > 15
+                        ? topRoute.name.substring(0, 15) + '...'
+                        : topRoute.name;
+
+                } catch (error) {
+                    console.error('Error loading route statistics:', error);
+                }
+            }
+
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.style.display = 'none';
+            }
+
+            // Enhanced Route Management Functions
+            let allRoutes = {};
+            let filteredRoutes = {};
+
+            function openRouteManagementModal() {
+                openModal('route-management-modal');
+                loadRoutesForManagement();
+            }
+
+            async function loadRoutesForManagement() {
+                if (!userId || !db) {
+                    console.warn('User not authenticated or database not initialized');
+                    return;
+                }
+
+                try {
+                    const routesSnapshot = await db.ref(`associations/${userId}/routes`).once('value');
+                    allRoutes = routesSnapshot.val() || {};
+                    filteredRoutes = { ...allRoutes };
+                    renderRoutesTable();
+                    updateRouteCounts();
+                } catch (error) {
+                    console.error('Error loading routes for management:', error);
+                    alert('Failed to load routes. Check console for details.');
+                }
+            }
+
+            function renderRoutesTable() {
+                const tableBody = document.getElementById('routes-table-body');
+                if (!tableBody) return;
+
+                tableBody.innerHTML = '';
+
+                if (Object.keys(filteredRoutes).length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                                <i class="fas fa-route" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+                                No routes found matching your criteria
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                Object.entries(filteredRoutes).forEach(([routeId, route]) => {
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-route-id', routeId);
+
+                    const statusClass = route.status === 'active' ? 'status-active' :
+                                      route.status === 'inactive' ? 'status-pending' : 'status-inactive';
+
+                    row.innerHTML = `
+                        <td style="padding: 12px;">
+                            <input type="checkbox" class="route-checkbox" value="${routeId}" style="margin-right: 8px;">
+                        </td>
+                        <td style="padding: 12px;">
+                            <div>
+                                <h4 style="margin: 0 0 5px 0; color: var(--dark-blue); font-weight: 600;">${route.name || 'Unnamed Route'}</h4>
+                                <p style="margin: 0; color: #666; font-size: 12px;">Fare: R ${parseFloat(route.fare || 0).toFixed(2)} | Max Vehicles: ${route.maxVehicles || 0}</p>
+                                ${route.description ? `<p style="margin: 3px 0 0 0; color: #888; font-size: 11px;">${route.description}</p>` : ''}
+                            </div>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span class="status-indicator ${statusClass}">${route.status || 'Active'}</span>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="font-weight: 600; color: var(--dark-blue);">${route.vehicles || 0}</span> / ${route.maxVehicles || 0}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            <button class="btn-action" onclick="editRoute('${routeId}')" style="background-color: #2196F3; color: white; border: none; padding: 6px 12px; border-radius: 4px; margin-right: 5px; font-size: 12px;">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn-action" onclick="deleteRoute('${routeId}')" style="background-color: #F44336; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px;">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                // Add event listeners for checkboxes
+                setupRouteCheckboxes();
+            }
+
+            function setupRouteCheckboxes() {
+                const selectAllCheckbox = document.getElementById('select-all-routes');
+                const routeCheckboxes = document.querySelectorAll('.route-checkbox');
+
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.addEventListener('change', (e) => {
+                        routeCheckboxes.forEach(checkbox => {
+                            checkbox.checked = e.target.checked;
+                        });
+                        updateBulkActionsVisibility();
+                    });
+                }
+
+                routeCheckboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', () => {
+                        updateBulkActionsVisibility();
+                        if (selectAllCheckbox) {
+                            const checkedBoxes = document.querySelectorAll('.route-checkbox:checked');
+                            selectAllCheckbox.checked = checkedBoxes.length === routeCheckboxes.length;
+                            selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < routeCheckboxes.length;
+                        }
+                    });
+                });
+            }
+
+            function updateBulkActionsVisibility() {
+                const selectedRoutes = document.querySelectorAll('.route-checkbox:checked');
+                const bulkActions = document.getElementById('bulk-actions');
+                const selectedCount = document.getElementById('selected-count');
+
+                if (selectedRoutes.length > 0) {
+                    bulkActions.style.display = 'block';
+                    selectedCount.textContent = selectedRoutes.length;
+                } else {
+                    bulkActions.style.display = 'none';
+                }
+            }
+
+            function updateRouteCounts() {
+                const totalCount = document.getElementById('total-count');
+                const filteredCount = document.getElementById('filtered-count');
+
+                if (totalCount) totalCount.textContent = Object.keys(allRoutes).length;
+                if (filteredCount) filteredCount.textContent = Object.keys(filteredRoutes).length;
+            }
+
+            function initializeRouteManagement() {
+                // Search functionality
+                const searchInput = document.getElementById('route-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        applyFilters();
+                    });
+                }
+
+                // Status filter
+                const statusFilter = document.getElementById('status-filter');
+                if (statusFilter) {
+                    statusFilter.addEventListener('change', () => {
+                        applyFilters();
+                    });
+                }
+
+                // Fare filter
+                const fareFilter = document.getElementById('fare-filter');
+                if (fareFilter) {
+                    fareFilter.addEventListener('change', () => {
+                        applyFilters();
+                    });
+                }
+
+                // Clear filters
+                const clearFiltersBtn = document.getElementById('clear-filters');
+                if (clearFiltersBtn) {
+                    clearFiltersBtn.addEventListener('click', () => {
+                        if (searchInput) searchInput.value = '';
+                        if (statusFilter) statusFilter.value = 'all';
+                        if (fareFilter) fareFilter.value = 'all';
+                        filteredRoutes = { ...allRoutes };
+                        renderRoutesTable();
+                        updateRouteCounts();
+                    });
+                }
+
+                // Bulk actions
+                setupBulkActions();
+
+                // Enhanced add route form
+                const addRouteForm = document.getElementById('add-route-form-enhanced');
+                if (addRouteForm) {
+                    addRouteForm.addEventListener('submit', handleAddRoute);
+                }
+            }
+
+            function applyFilters() {
+                const searchTerm = document.getElementById('route-search')?.value.toLowerCase() || '';
+                const statusFilter = document.getElementById('status-filter')?.value || 'all';
+                const fareFilter = document.getElementById('fare-filter')?.value || 'all';
+
+                filteredRoutes = {};
+
+                Object.entries(allRoutes).forEach(([routeId, route]) => {
+                    const matchesSearch = !searchTerm || route.name?.toLowerCase().includes(searchTerm);
+                    const matchesStatus = statusFilter === 'all' || route.status === statusFilter;
+                    const matchesFare = checkFareRange(route.fare, fareFilter);
+
+                    if (matchesSearch && matchesStatus && matchesFare) {
+                        filteredRoutes[routeId] = route;
+                    }
+                });
+
+                renderRoutesTable();
+                updateRouteCounts();
+            }
+
+            function checkFareRange(fare, filter) {
+                if (filter === 'all') return true;
+                const fareValue = parseFloat(fare) || 0;
+
+                switch (filter) {
+                    case '0-20': return fareValue >= 0 && fareValue <= 20;
+                    case '21-40': return fareValue >= 21 && fareValue <= 40;
+                    case '41-60': return fareValue >= 41 && fareValue <= 60;
+                    case '60+': return fareValue >= 60;
+                    default: return true;
+                }
+            }
+
+            function setupBulkActions() {
+                // Bulk activate
+                const bulkActivate = document.getElementById('bulk-activate');
+                if (bulkActivate) {
+                    bulkActivate.addEventListener('click', () => {
+                        bulkUpdateStatus('active');
+                    });
+                }
+
+                // Bulk deactivate
+                const bulkDeactivate = document.getElementById('bulk-deactivate');
+                if (bulkDeactivate) {
+                    bulkDeactivate.addEventListener('click', () => {
+                        bulkUpdateStatus('inactive');
+                    });
+                }
+
+                // Bulk suspend
+                const bulkSuspend = document.getElementById('bulk-suspend');
+                if (bulkSuspend) {
+                    bulkSuspend.addEventListener('click', () => {
+                        bulkUpdateStatus('suspended');
+                    });
+                }
+
+                // Bulk delete
+                const bulkDelete = document.getElementById('bulk-delete');
+                if (bulkDelete) {
+                    bulkDelete.addEventListener('click', () => {
+                        showConfirmation(
+                            'Delete Routes',
+                            'fas fa-exclamation-triangle',
+                            'Are you sure you want to delete the selected routes? This action cannot be undone.',
+                            'danger',
+                            () => bulkDeleteRoutes()
+                        );
+                    });
+                }
+            }
+
+            async function bulkUpdateStatus(status) {
+                const selectedRoutes = document.querySelectorAll('.route-checkbox:checked');
+                if (selectedRoutes.length === 0) return;
+
+                const updates = {};
+                selectedRoutes.forEach(checkbox => {
+                    updates[checkbox.value] = { status: status, updatedAt: new Date().toISOString() };
+                });
+
+                try {
+                    await db.ref(`associations/${userId}/routes`).update(updates);
+                    console.log(`Bulk updated ${selectedRoutes.length} routes to ${status}`);
+                    loadRoutesForManagement();
+                    alert(`Successfully updated ${selectedRoutes.length} routes to ${status}`);
+                } catch (error) {
+                    console.error('Bulk update error:', error);
+                    alert('Failed to update routes. Check console for details.');
+                }
+            }
+
+            async function bulkDeleteRoutes() {
+                const selectedRoutes = document.querySelectorAll('.route-checkbox:checked');
+                if (selectedRoutes.length === 0) return;
+
+                const deletePromises = Array.from(selectedRoutes).map(checkbox =>
+                    db.ref(`associations/${userId}/routes/${checkbox.value}`).remove()
+                );
+
+                try {
+                    await Promise.all(deletePromises);
+                    console.log(`Bulk deleted ${selectedRoutes.length} routes`);
+                    loadRoutesForManagement();
+                    alert(`Successfully deleted ${selectedRoutes.length} routes`);
+                } catch (error) {
+                    console.error('Bulk delete error:', error);
+                    alert('Failed to delete routes. Check console for details.');
+                }
+            }
+
+            async function handleAddRoute(e) {
+                e.preventDefault();
+
+                const routeName = document.getElementById('route-name-enhanced').value.trim();
+                const description = document.getElementById('route-description').value.trim();
+                const fare = parseFloat(document.getElementById('route-fare-enhanced').value);
+                const maxVehicles = parseInt(document.getElementById('route-max-vehicles-enhanced').value);
+                const status = document.getElementById('route-status-enhanced').value;
+
+                if (!routeName || isNaN(fare) || isNaN(maxVehicles)) {
+                    alert('Please fill all required fields with valid values.');
+                    return;
+                }
+
+                const newRoute = {
+                    name: routeName,
+                    description: description,
+                    fare: fare,
+                    maxVehicles: maxVehicles,
+                    status: status,
+                    vehicles: 0,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                try {
+                    const newRouteRef = await db.ref(`associations/${userId}/routes`).push();
+                    await newRouteRef.set(newRoute);
+                    console.log('Route added:', newRouteRef.key);
+
+                    // Reset form
+                    e.target.reset();
+
+                    // Reload data
+                    loadRoutesForManagement();
+                    alert('Route added successfully!');
+                } catch (error) {
+                    console.error('Error adding route:', error);
+                    alert('Failed to add route. Check console for details.');
+                }
+            }
+
+            function editRoute(routeId) {
+                const route = allRoutes[routeId];
+                if (!route) return;
+
+                document.getElementById('edit-route-id').value = routeId;
+                document.getElementById('edit-route-name').value = route.name || '';
+                document.getElementById('edit-route-description').value = route.description || '';
+                document.getElementById('edit-route-fare').value = route.fare || '';
+                document.getElementById('edit-route-max-vehicles').value = route.maxVehicles || '';
+                document.getElementById('edit-route-status').value = route.status || 'active';
+
+                openModal('route-edit-modal');
+            }
+
+            async function handleEditRoute(e) {
+                e.preventDefault();
+
+                const routeId = document.getElementById('edit-route-id').value;
+                const routeName = document.getElementById('edit-route-name').value.trim();
+                const description = document.getElementById('edit-route-description').value.trim();
+                const fare = parseFloat(document.getElementById('edit-route-fare').value);
+                const maxVehicles = parseInt(document.getElementById('edit-route-max-vehicles').value);
+                const status = document.getElementById('edit-route-status').value;
+
+                if (!routeName || isNaN(fare) || isNaN(maxVehicles)) {
+                    alert('Please fill all required fields with valid values.');
+                    return;
+                }
+
+                const updates = {
+                    name: routeName,
+                    description: description,
+                    fare: fare,
+                    maxVehicles: maxVehicles,
+                    status: status,
+                    updatedAt: new Date().toISOString()
+                };
+
+                try {
+                    await db.ref(`associations/${userId}/routes/${routeId}`).update(updates);
+                    console.log('Route updated:', routeId);
+                    closeModal('route-edit-modal');
+                    loadRoutesForManagement();
+                    alert('Route updated successfully!');
+                } catch (error) {
+                    console.error('Error updating route:', error);
+                    alert('Failed to update route. Check console for details.');
+                }
+            }
+
+            function deleteRoute(routeId) {
+                const route = allRoutes[routeId];
+                showConfirmation(
+                    'Delete Route',
+                    'fas fa-exclamation-triangle',
+                    `Are you sure you want to delete the route "${route?.name || 'Unknown Route'}"? This action cannot be undone.`,
+                    'danger',
+                    () => performDeleteRoute(routeId)
+                );
+            }
+
+            async function performDeleteRoute(routeId) {
+                try {
+                    await db.ref(`associations/${userId}/routes/${routeId}`).remove();
+                    console.log('Route deleted:', routeId);
+                    loadRoutesForManagement();
+                    alert('Route deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting route:', error);
+                    alert('Failed to delete route. Check console for details.');
+                }
+            }
+
+            function showConfirmation(title, iconClass, message, type = 'primary', onConfirm) {
+                document.getElementById('confirmation-title').textContent = title;
+                document.getElementById('confirmation-icon').className = iconClass;
+                document.getElementById('confirmation-message').textContent = message;
+
+                const confirmBtn = document.getElementById('confirm-action');
+                confirmBtn.onclick = () => {
+                    onConfirm();
+                    closeModal('confirmation-modal');
+                };
+
+                if (type === 'danger') {
+                    confirmBtn.style.backgroundColor = '#F44336';
+                } else {
+                    confirmBtn.style.backgroundColor = '';
+                }
+
+                openModal('confirmation-modal');
+            }
+
+            // Add event listener for edit route form
+            document.addEventListener('DOMContentLoaded', () => {
+                const editRouteForm = document.getElementById('edit-route-form');
+                if (editRouteForm) {
+                    editRouteForm.addEventListener('submit', handleEditRoute);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Association App - TaxiDrive</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        :root {
+            --dark-blue: #1A2A44;
+            --light-blue: #A3C9E6;
+            --white: #FFFFFF;
+            --gray: #D3D3D3;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #F44336;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: var(--white);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Header Styles */
+        header {
+            background-color: var(--dark-blue);
+            color: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .user-profile:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .user-role {
+            font-size: 11px;
+            opacity: 0.8;
+            line-height: 1.2;
+        }
+
+        .header-icons i {
+            margin-left: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .header-icons i:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* App Content Areas */
+        .app-content {
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--dark-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title .view-all {
+            font-size: 12px;
+            color: var(--light-blue);
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        /* Card Styles */
+        .card {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--gray);
+        }
+        
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background-color: var(--dark-blue);
+            color: var(--white);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        /* List Items */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--gray);
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--light-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        
+        .item-icon i {
+            color: var(--dark-blue);
+            font-size: 18px;
+        }
+        
+        .item-details h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+            color: var(--dark-blue);
+            font-weight: 500;
+        }
+        
+        .item-details p {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .item-value {
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+        
+        .status-pending {
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #2196F3;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--dark-blue);
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--gray);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            border-color: var(--dark-blue);
+            outline: none;
+        }
+        
+        /* Add/Remove Buttons */
+        .add-remove-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .add-btn, .remove-btn {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
+        }
+        
+        .add-btn {
+            background-color: var(--success);
+            color: var(--white);
+        }
+        
+        .add-btn:hover {
+            background-color: #388e3c;
+        }
+        
+        .remove-btn {
+            background-color: var(--danger);
+            color: var(--white);
+        }
+        
+        .remove-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: var(--dark-blue);
+            color: var(--white);
+        }
+        
+        .btn-primary:hover {
+            background-color: #15233a;
+            transform: translateY(-2px);
+        }
+        
+        .btn i {
+            font-size: 16px;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark-blue);
+        }
+        
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--white);
+            padding: 12px 0;
+            border-top: 1px solid var(--gray);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .nav-item.active {
+            color: var(--dark-blue);
+        }
+        
+        .nav-item:hover {
+            color: #15233a;
+        }
+        
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <img src="Logo1.png" alt="TaxiDrive Logo">
+                <h1>TaxiDrive</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-profile" id="user-profile">
+                    <div class="user-avatar" id="user-avatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name" id="user-name">Loading...</div>
+                        <div class="user-role" id="user-role">Association</div>
+                    </div>
+                </div>
+                <div class="header-icons">
+                    <i class="fas fa-bell" id="notifications-btn"></i>
+                    <i class="fas fa-sign-out-alt" id="logout-btn"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- App Content -->
+        <div class="app-content" id="association-app">
+            <!-- Association Dashboard -->
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <i class="fas fa-car"></i>
+                    <div class="stat-value" id="stat-vehicles">42</div>
+                    <div class="stat-label">Registered Vehicles</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-value" id="stat-drivers">65</div>
+                    <div class="stat-label">Registered Drivers</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-route"></i>
+                    <div class="stat-value" id="stat-routes">8</div>
+                    <div class="stat-label">Active Routes</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <div class="stat-value" id="stat-fees">R 4,250</div>
+                    <div class="stat-label">Association Fees</div>
+                </div>
+            </div>
+            
+            <!-- Route Management -->
+            <div class="section-title">Route Management <span class="view-all" id="manage-routes">Manage</span></div>
+            <!-- Route Statistics -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;">
+                <div class="stat-card" style="background-color: #2196F3;">
+                    <i class="fas fa-chart-line"></i>
+                    <div class="stat-value" id="stat-total-revenue">R 0</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+                <div class="stat-card" style="background-color: #4CAF50;">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-value" id="stat-total-trips">0</div>
+                    <div class="stat-label">Total Trips</div>
+                </div>
+                <div class="stat-card" style="background-color: #FF9800;">
+                    <i class="fas fa-percentage"></i>
+                    <div class="stat-value" id="stat-avg-occupancy">0%</div>
+                    <div class="stat-label">Avg Occupancy</div>
+                </div>
+                <div class="stat-card" style="background-color: #9C27B0;">
+                    <i class="fas fa-trophy"></i>
+                    <div class="stat-value" id="stat-top-route">-</div>
+                    <div class="stat-label">Top Route</div>
+                </div>
+            </div>
+            <div class="card" id="route-card">
+                <div class="list-item" data-route-id="route1">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-route"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Soweto-Johannesburg CBD</h4>
+                            <p>Fare: R 35.00 | 12 vehicles</p>
+                        </div>
+                    </div>
+                    <div class="item-value">
+                        <span class="status-indicator status-active">Active</span>
+                    </div>
+                </div>
+                <div class="list-item" data-route-id="route2">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-route"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Alexandra-Sandton</h4>
+                            <p>Fare: R 25.00 | 8 vehicles</p>
+                        </div>
+                    </div>
+                    <div class="item-value">
+                        <span class="status-indicator status-active">Active</span>
+                    </div>
+                </div>
+                <div class="list-item" data-route-id="route3">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-route"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Pretoria-Midrand</h4>
+                            <p>Fare: R 40.00 | 5 vehicles</p>
+                        </div>
+                    </div>
+                    <div class="item-value">
+                        <span class="status-indicator status-active">Active</span>
+                    </div>
+                </div>
+                <div class="add-remove-buttons">
+                    <button class="add-btn" id="add-route-btn">
+                        <i class="fas fa-plus"></i> Add Route
+                    </button>
+                    <button class="remove-btn" id="remove-route-btn">
+                        <i class="fas fa-minus"></i> Remove Route
+                    </button>
+                </div>
+                <button class="btn btn-primary" id="edit-fare-btn">
+                    <i class="fas fa-edit"></i> Edit Fare Rates
+                </button>
+            </div>
+            
+            <!-- Member Registration -->
+            <div class="section-title">Member Registration <span class="view-all" id="view-members">View All</span></div>
+            <div class="card" id="member-card">
+                <div class="form-group">
+                    <label class="form-label">Bulk Upload Members</label>
+                    <input type="file" class="form-input" id="bulk-upload-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Verification Status</label>
+                    <div class="list-item">
+                        <div class="item-info">
+                            <div class="item-details">
+                                <h4>Pending Verifications</h4>
+                                <p>7 drivers, 3 vehicles need approval</p>
+                            </div>
+                        </div>
+                        <div class="item-value">
+                            <span class="status-indicator status-pending">10</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="add-remove-buttons">
+                    <button class="add-btn" id="add-member-btn">
+                        <i class="fas fa-plus"></i> Add Member
+                    </button>
+                    <button class="remove-btn" id="remove-member-btn">
+                        <i class="fas fa-minus"></i> Remove Member
+                    </button>
+                </div>
+                <button class="btn btn-primary" id="start-verification-btn">
+                    <i class="fas fa-user-check"></i> Start Verification
+                </button>
+            </div>
+            
+            <!-- Dispute Resolution -->
+            <div class="section-title">Dispute Resolution <span class="view-all" id="view-disputes">View All</span></div>
+            <div class="card" id="dispute-card">
+                <div class="list-item" data-dispute-id="dispute1">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Overcharging Complaint</h4>
+                            <p>Vehicle: ABC 123 EC | Driver: Siyabonga M.</p>
+                        </div>
+                    </div>
+                    <div class="item-value">
+                        <span class="status-indicator status-pending">Review</span>
+                    </div>
+                </div>
+                <div class="list-item" data-dispute-id="dispute2">
+                    <div class="item-info">
+                        <div class="item-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="item-details">
+                            <h4>Route Deviation</h4>
+                            <p>Vehicle: DEF 456 EC | Driver: Lungelo N.</p>
+                        </div>
+                    </div>
+                    <div class="item-value">
+                        <span class="status-indicator status-pending">Review</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="resolve-disputes-btn">
+                    <i class="fas fa-gavel"></i> Resolve Disputes
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active" data-nav="home">
+                <i class="fas fa-home"></i>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" data-nav="map">
+                <i class="fas fa-map-marker-alt"></i>
+                <div>Map</div>
+            </div>
+            <div class="nav-item" data-nav="wallet">
+                <i class="fas fa-wallet"></i>
+                <div>Wallet</div>
+            </div>
+            <div class="nav-item" data-nav="profile">
+                <i class="fas fa-user"></i>
+                <div>Profile</div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <div id="add-route-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Add New Route</h2>
+                    <span class="modal-close" onclick="closeModal('add-route-modal')">&times;</span>
+                </div>
+                <form id="add-route-form">
+                    <div class="form-group">
+                        <label class="form-label">Route Name</label>
+                        <input type="text" class="form-input" id="route-name" required maxlength="50">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fare (R)</label>
+                        <input type="number" class="form-input" id="route-fare" step="0.01" required min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max Vehicles</label>
+                        <input type="number" class="form-input" id="route-max-vehicles" required min="0">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Route</button>
+                    <button type="button" class="btn" onclick="closeModal('add-route-modal')">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-fare-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Fare Rates</h2>
+                    <span class="modal-close" onclick="closeModal('edit-fare-modal')">&times;</span>
+                </div>
+                <form id="edit-fare-form">
+                    <div class="form-group">
+                        <label class="form-label">Route</label>
+                        <select class="form-input" id="edit-fare-route">
+                            <option value="route1">Soweto-Johannesburg CBD</option>
+                            <option value="route2">Alexandra-Sandton</option>
+                            <option value="route3">Pretoria-Midrand</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Fare (R)</label>
+                        <input type="number" class="form-input" id="new-fare" step="0.01" required min="0">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn" onclick="closeModal('edit-fare-modal')">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Enhanced Route Management Modal -->
+        <div id="route-management-modal" class="modal">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Route Management</h2>
+                    <span class="modal-close" onclick="closeModal('route-management-modal')">&times;</span>
+                </div>
+
+                <!-- Search and Filter Section -->
+                <div class="search-filter-section" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Search Routes</label>
+                            <input type="text" class="form-input" id="route-search" placeholder="Search by route name...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status Filter</label>
+                            <select class="form-input" id="status-filter">
+                                <option value="all">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fare Range</label>
+                            <select class="form-input" id="fare-filter">
+                                <option value="all">All Fares</option>
+                                <option value="0-20">R 0 - R 20</option>
+                                <option value="21-40">R 21 - R 40</option>
+                                <option value="41-60">R 41 - R 60</option>
+                                <option value="60+">R 60+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" class="btn" id="clear-filters" style="background-color: #6c757d; color: white;">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                        <div id="route-count" style="margin-left: auto; font-size: 14px; color: #666;">
+                            Showing <span id="filtered-count">0</span> of <span id="total-count">0</span> routes
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Actions Section -->
+                <div class="bulk-actions-section" style="margin-bottom: 20px; padding: 15px; background-color: #e3f2fd; border-radius: 8px; display: none;" id="bulk-actions">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span id="selected-count">0</span> routes selected
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="btn" id="bulk-activate" style="background-color: #4CAF50; color: white; font-size: 12px;">
+                                <i class="fas fa-play"></i> Activate
+                            </button>
+                            <button type="button" class="btn" id="bulk-deactivate" style="background-color: #FF9800; color: white; font-size: 12px;">
+                                <i class="fas fa-pause"></i> Deactivate
+                            </button>
+                            <button type="button" class="btn" id="bulk-suspend" style="background-color: #F44336; color: white; font-size: 12px;">
+                                <i class="fas fa-ban"></i> Suspend
+                            </button>
+                            <button type="button" class="btn" id="bulk-delete" style="background-color: #F44336; color: white; font-size: 12px;">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Routes Table -->
+                <div class="routes-table-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;">
+                    <table style="width: 100%; border-collapse: collapse;" id="routes-table">
+                        <thead style="background-color: #f8f9fa; position: sticky; top: 0;">
+                            <tr>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">
+                                    <input type="checkbox" id="select-all-routes" style="margin-right: 8px;">
+                                    <label for="select-all-routes" style="cursor: pointer; font-weight: 600;">Select All</label>
+                                </th>
+                                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd; font-weight: 600;">Route Details</th>
+                                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; font-weight: 600;">Status</th>
+                                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #ddd; font-weight: 600;">Vehicles</th>
+                                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #ddd; font-weight: 600;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="routes-table-body">
+                            <!-- Routes will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add New Route Section -->
+                <div style="margin-top: 20px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
+                    <h3 style="margin-bottom: 15px; color: var(--dark-blue);">
+                        <i class="fas fa-plus-circle"></i> Add New Route
+                    </h3>
+                    <form id="add-route-form-enhanced">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label class="form-label">Route Name *</label>
+                                <input type="text" class="form-input" id="route-name-enhanced" required maxlength="50" placeholder="e.g., Soweto-Johannesburg CBD">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <input type="text" class="form-input" id="route-description" maxlength="100" placeholder="Brief description of the route">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div class="form-group">
+                                <label class="form-label">Fare (R) *</label>
+                                <input type="number" class="form-input" id="route-fare-enhanced" step="0.01" required min="0" placeholder="35.00">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Max Vehicles *</label>
+                                <input type="number" class="form-input" id="route-max-vehicles-enhanced" required min="1" placeholder="12">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <select class="form-input" id="route-status-enhanced">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="suspended">Suspended</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                                <i class="fas fa-plus"></i> Add Route
+                            </button>
+                            <button type="button" class="btn" onclick="closeModal('route-management-modal')" style="flex: 1;">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Edit Modal -->
+        <div id="route-edit-modal" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Route</h2>
+                    <span class="modal-close" onclick="closeModal('route-edit-modal')">&times;</span>
+                </div>
+                <form id="edit-route-form">
+                    <input type="hidden" id="edit-route-id">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Route Name *</label>
+                            <input type="text" class="form-input" id="edit-route-name" required maxlength="50">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-input" id="edit-route-description" maxlength="100">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Fare (R) *</label>
+                            <input type="number" class="form-input" id="edit-route-fare" step="0.01" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Vehicles *</label>
+                            <input type="number" class="form-input" id="edit-route-max-vehicles" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-input" id="edit-route-status">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <button type="button" class="btn" onclick="closeModal('route-edit-modal')" style="flex: 1;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="confirmation-modal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="confirmation-title">Confirm Action</h2>
+                    <span class="modal-close" onclick="closeModal('confirmation-modal')">&times;</span>
+                </div>
+                <div style="padding: 20px; text-align: center;">
+                    <div id="confirmation-icon" style="font-size: 48px; margin-bottom: 15px;"></div>
+                    <p id="confirmation-message" style="margin-bottom: 20px; line-height: 1.5;"></p>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" class="btn btn-primary" id="confirm-action" style="flex: 1;">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>
+                        <button type="button" class="btn" onclick="closeModal('confirmation-modal')" style="flex: 1;">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js" defer></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" defer></script>
+    <script defer>
+        // Wait for DOM content to load
+        document.addEventListener('DOMContentLoaded', () => {
             // Firebase configuration (replace with your actual config)
             const firebaseConfig = {
                 apiKey: "your-api-key",
