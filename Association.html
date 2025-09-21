@@ -970,6 +970,7 @@
                 }
                 auth = firebase.auth();
                 db = firebase.database();
+                window.db = db; // Expose db globally for other scripts
                 console.log('Firebase initialized successfully at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
             } catch (error) {
                 console.error('Firebase initialization error:', error.message);
@@ -1764,6 +1765,11 @@
 
                     async function loadPendingMembers() {
                         try {
+                            if (typeof db === 'undefined' || db === null) {
+                                console.error('Firebase database (db) is not initialized');
+                                pendingMembersList.innerHTML = '<p style="color: red;">Database not initialized.</p>';
+                                return;
+                            }
                             // Use enhancedFirebaseService if available
                             if (typeof enhancedFirebaseService !== 'undefined' && enhancedFirebaseService.fetchPendingMembers) {
                                 const members = await enhancedFirebaseService.fetchPendingMembers();
