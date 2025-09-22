@@ -42,6 +42,51 @@ class EnhancedFirebaseService {
         }
     }
 
+    // Member approval methods
+    async fetchPendingMembers() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can fetch pending members');
+        }
+        try {
+            const snapshot = await this.database.ref('members').orderByChild('approvalStatus').equalTo('pending').once('value');
+            return snapshot.val() || {};
+        } catch (error) {
+            console.error('Fetch pending members error:', error);
+            throw error;
+        }
+    }
+
+    async fetchMemberDocuments(memberId) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can fetch member documents');
+        }
+        try {
+            const snapshot = await this.database.ref(`memberDocuments/${memberId}`).once('value');
+            return snapshot.val() || {};
+        } catch (error) {
+            console.error('Fetch member documents error:', error);
+            throw error;
+        }
+    }
+
+    async updateMemberApprovalStatus(memberId, status) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can update member approval status');
+        }
+        if (!['approved', 'rejected', 'pending'].includes(status)) {
+            throw new Error('Invalid approval status');
+        }
+        try {
+            await this.database.ref(`members/${memberId}`).update({
+                approvalStatus: status,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Update member approval status error:', error);
+            throw error;
+        }
+    }
+
     // Enhanced Route management (Association only)
     async addRoute(routeData) {
         if (this.userRole !== 'association') {
@@ -410,6 +455,182 @@ class EnhancedFirebaseService {
     // Cleanup listeners
     off(ref) {
         this.database.ref(ref).off();
+    }
+
+    // Database Clearing Methods (Association only)
+    async clearAllUsers() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear user data');
+        }
+
+        try {
+            console.log('Starting to clear all users...');
+            await this.database.ref('users').remove();
+            console.log('All users cleared successfully');
+            return { success: true, message: 'All users cleared successfully' };
+        } catch (error) {
+            console.error('Clear users error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllRoutes() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear route data');
+        }
+
+        try {
+            console.log('Starting to clear all routes...');
+            await this.database.ref('routes').remove();
+            console.log('All routes cleared successfully');
+            return { success: true, message: 'All routes cleared successfully' };
+        } catch (error) {
+            console.error('Clear routes error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllTrips() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear trip data');
+        }
+
+        try {
+            console.log('Starting to clear all trips...');
+            await this.database.ref('trips').remove();
+            console.log('All trips cleared successfully');
+            return { success: true, message: 'All trips cleared successfully' };
+        } catch (error) {
+            console.error('Clear trips error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllMembers() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear member data');
+        }
+
+        try {
+            console.log('Starting to clear all members...');
+            await this.database.ref('members').remove();
+            await this.database.ref('memberDocuments').remove();
+            console.log('All members and member documents cleared successfully');
+            return { success: true, message: 'All members and member documents cleared successfully' };
+        } catch (error) {
+            console.error('Clear members error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllVehicles() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear vehicle data');
+        }
+
+        try {
+            console.log('Starting to clear all vehicles...');
+            await this.database.ref('vehicles').remove();
+            console.log('All vehicles cleared successfully');
+            return { success: true, message: 'All vehicles cleared successfully' };
+        } catch (error) {
+            console.error('Clear vehicles error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllDrivers() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear driver data');
+        }
+
+        try {
+            console.log('Starting to clear all drivers...');
+            await this.database.ref('drivers').remove();
+            console.log('All drivers cleared successfully');
+            return { success: true, message: 'All drivers cleared successfully' };
+        } catch (error) {
+            console.error('Clear drivers error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllPayments() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear payment data');
+        }
+
+        try {
+            console.log('Starting to clear all payments...');
+            await this.database.ref('payments').remove();
+            console.log('All payments cleared successfully');
+            return { success: true, message: 'All payments cleared successfully' };
+        } catch (error) {
+            console.error('Clear payments error:', error);
+            throw error;
+        }
+    }
+
+    async clearAllData() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can perform complete database clear');
+        }
+
+        try {
+            console.log('Starting complete database clear...');
+            const clearPromises = [
+                this.database.ref('users').remove(),
+                this.database.ref('routes').remove(),
+                this.database.ref('trips').remove(),
+                this.database.ref('members').remove(),
+                this.database.ref('memberDocuments').remove(),
+                this.database.ref('vehicles').remove(),
+                this.database.ref('drivers').remove(),
+                this.database.ref('payments').remove(),
+                this.database.ref('owners').remove(),
+                this.database.ref('passengers').remove(),
+                this.database.ref('associations').remove()
+            ];
+
+            await Promise.all(clearPromises);
+            console.log('Complete database clear finished successfully');
+            return { success: true, message: 'Complete database clear finished successfully' };
+        } catch (error) {
+            console.error('Complete database clear error:', error);
+            throw error;
+        }
+    }
+
+    // Database Status and Information Methods
+    async getDatabaseStatus() {
+        try {
+            const status = {
+                users: 0,
+                routes: 0,
+                trips: 0,
+                members: 0,
+                vehicles: 0,
+                drivers: 0,
+                payments: 0,
+                timestamp: new Date().toISOString()
+            };
+
+            const promises = [
+                this.database.ref('users').once('value').then(snapshot => status.users = snapshot.numChildren()),
+                this.database.ref('routes').once('value').then(snapshot => status.routes = snapshot.numChildren()),
+                this.database.ref('trips').once('value').then(snapshot => status.trips = snapshot.numChildren()),
+                this.database.ref('members').once('value').then(snapshot => status.members = snapshot.numChildren()),
+                this.database.ref('vehicles').once('value').then(snapshot => status.vehicles = snapshot.numChildren()),
+                this.database.ref('drivers').once('value').then(snapshot => status.drivers = snapshot.numChildren()),
+                this.database.ref('payments').once('value').then(snapshot => status.payments = snapshot.numChildren())
+            ];
+
+            await Promise.all(promises);
+            return status;
+        } catch (error) {
+            console.error('Get database status error:', error);
+            throw error;
+        }
     }
 }
 
