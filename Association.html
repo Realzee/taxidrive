@@ -981,6 +981,10 @@
             // Initialize enhancedFirebaseService instance
             window.enhancedFirebaseService = new EnhancedFirebaseService();
 
+            // Global variables
+            window.userId = null;
+            window.userName = null;
+            window.userRole = null;
             let userId = null;
             let userName = null;
             let userRole = null;
@@ -988,6 +992,7 @@
             auth?.onAuthStateChanged(async (user) => {
                 if (user) {
                     userId = user.uid;
+                    window.userId = user.uid; // Make globally accessible
                     console.log('User logged in:', userId, 'at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
 
                     // Load user data from localStorage first (for immediate display)
@@ -1258,10 +1263,11 @@
                 }
             }
 
-            function openModal(modalId) {
+            // Make openModal globally accessible
+            window.openModal = function(modalId) {
                 const modal = document.getElementById(modalId);
                 if (modal) modal.style.display = 'flex';
-            }
+            };
 
             async function loadRouteStatistics() {
                 if (!userId || !db) {
@@ -1312,10 +1318,11 @@
                 }
             }
 
-            function closeModal(modalId) {
+            // Make closeModal globally accessible
+            window.closeModal = function(modalId) {
                 const modal = document.getElementById(modalId);
                 if (modal) modal.style.display = 'none';
-            }
+            };
 
             // Enhanced Route Management Functions
             let allRoutes = {};
@@ -1770,13 +1777,21 @@
                                 pendingMembersList.innerHTML = '<p style="color: red;">Database not initialized.</p>';
                                 return;
                             }
+
+                            // Use global userId - access window.userId directly
+                            if (!window.userId) {
+                                console.error('User ID not available');
+                                pendingMembersList.innerHTML = '<p style="color: red;">User not authenticated.</p>';
+                                return;
+                            }
+
                             // Use enhancedFirebaseService if available
                             if (typeof enhancedFirebaseService !== 'undefined' && enhancedFirebaseService.fetchPendingMembers) {
                                 const members = await enhancedFirebaseService.fetchPendingMembers();
                                 renderPendingMembers(members);
                             } else {
                                 // Fallback to direct Firebase call
-                                const pendingMembersSnapshot = await db.ref(`associations/${userId}/members`).orderByChild('approvalStatus').equalTo('pending').once('value');
+                                const pendingMembersSnapshot = await db.ref(`associations/${window.userId}/members`).orderByChild('approvalStatus').equalTo('pending').once('value');
                                 const members = pendingMembersSnapshot.val();
                                 renderPendingMembers(members);
                             }
