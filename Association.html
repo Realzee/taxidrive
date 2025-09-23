@@ -16,6 +16,14 @@
             --success: #4CAF50;
             --warning: #FF9800;
             --danger: #F44336;
+            /* Enhanced text sizing variables */
+            --text-xs: clamp(10px, 1.5vw, 12px);
+            --text-sm: clamp(12px, 2vw, 14px);
+            --text-base: clamp(14px, 2.5vw, 16px);
+            --text-lg: clamp(16px, 3vw, 18px);
+            --text-xl: clamp(18px, 3.5vw, 20px);
+            --text-2xl: clamp(20px, 4vw, 24px);
+            --text-3xl: clamp(24px, 5vw, 28px);
             /* Glass effect variables */
             --glass-bg: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
@@ -341,7 +349,7 @@
 
         .stat-label {
             font-size: 13px;
-            color: #666;
+            color: var(--dark-blue);
             text-transform: uppercase;
             letter-spacing: 0.8px;
             font-weight: 600;
@@ -540,7 +548,7 @@
         .modal-title {
             font-size: 22px;
             font-weight: 700;
-            color: var(--white);
+            color: var(--dark-blue);
             margin: 0;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
@@ -878,6 +886,63 @@
                 margin-bottom: 15px;
             }
         }
+
+        /* Enhanced Drivers List Styles */
+#drivers-section {
+    max-height: 500px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--light-blue) rgba(0, 0, 0, 0.1);
+}
+
+#drivers-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+#drivers-section::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
+#drivers-section::-webkit-scrollbar-thumb {
+    background: var(--light-blue);
+    border-radius: 3px;
+}
+
+#drivers-section::-webkit-scrollbar-thumb:hover {
+    background: #8bb8d4;
+}
+
+/* Driver item hover effects for read-only view */
+.list-item:hover {
+    background: rgba(163, 201, 230, 0.08) !important;
+    transform: translateX(2px);
+}
+
+/* Status indicator improvements */
+.status-indicator {
+    white-space: nowrap;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.status-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+
     </style>
 </head>
 <body>
@@ -1049,6 +1114,54 @@
                 </div>
             </div>
         </div>
+
+        <!-- Registered Drivers Dashboard -->
+<div class="dashboard-section">
+    <div class="section-header">
+        <h2 class="section-title">Registered Drivers Dashboard</h2>
+        <button class="refresh-btn" id="refresh-drivers">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Association Name Display -->
+    <div style="background: var(--white); border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); padding: 15px; margin-bottom: 20px; text-align: center; border-left: 4px solid var(--light-blue);">
+        <h3 style="color: var(--dark-blue); margin: 0 0 5px 0;">
+            <i class="fas fa-building"></i> Association: <span id="drivers-dashboard-association-name">Loading...</span>
+        </h3>
+        <p style="color: #666; margin: 0; font-size: 14px;">All registered drivers belong to this association</p>
+    </div>
+
+    <!-- Drivers Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number" id="total-drivers-count">0</div>
+            <div class="stat-label">Total Drivers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="active-drivers-count">0</div>
+            <div class="stat-label">Active Drivers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="inactive-drivers-count">0</div>
+            <div class="stat-label">Inactive Drivers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="drivers-with-vehicles-count">0</div>
+            <div class="stat-label">With Vehicles</div>
+        </div>
+    </div>
+
+    <!-- Registered Drivers List -->
+    <div class="pending-owners-list" id="drivers-section" style="max-height: 500px; overflow-y: auto;">
+        <div class="section-header">
+            <h3 class="section-title">Registered Drivers</h3>
+        </div>
+        <div id="drivers-content">
+            <!-- Drivers will be loaded here -->
+        </div>
+    </div>
+</div>
 
         <!-- Document Preview Modal -->
         <div class="modal" id="document-modal">
@@ -2875,6 +2988,446 @@
                         });
                     }
                 });
+
+                // Drivers Dashboard Functionality
+document.addEventListener('DOMContentLoaded', () => {
+    // Drivers dashboard elements
+    const driversContent = document.getElementById('drivers-content');
+    const refreshDriversBtn = document.getElementById('refresh-drivers');
+    const totalDriversCountEl = document.getElementById('total-drivers-count');
+    const activeDriversCountEl = document.getElementById('active-drivers-count');
+    const inactiveDriversCountEl = document.getElementById('inactive-drivers-count');
+    const driversWithVehiclesCountEl = document.getElementById('drivers-with-vehicles-count');
+    const driversAssociationNameEl = document.getElementById('drivers-dashboard-association-name');
+
+    let driversList = [];
+    let currentUserAssociationId = null;
+
+    // Initialize drivers dashboard
+    async function initializeDriversDashboard() {
+        if (!window.userId) {
+            console.error('User not authenticated for drivers dashboard');
+            return;
+        }
+
+        try {
+            // Get current association ID
+            await getCurrentAssociationId();
+            
+            // Load drivers data
+            await loadDriversDashboardData();
+            
+            // Setup event listeners
+            setupDriversEventListeners();
+        } catch (error) {
+            console.error('Error initializing drivers dashboard:', error);
+            showDriversErrorState('Failed to initialize drivers dashboard.');
+        }
+    }
+
+    async function getCurrentAssociationId() {
+        if (!window.userId || !db) {
+            throw new Error('User not authenticated or database not initialized');
+        }
+
+        try {
+            const userSnapshot = await db.ref(`users/${window.userId}`).once('value');
+            const userData = userSnapshot.val();
+            
+            if (userData && userData.associationId) {
+                currentUserAssociationId = userData.associationId;
+                
+                // Update association name display
+                const associationSnapshot = await db.ref(`associations/${currentUserAssociationId}`).once('value');
+                const associationData = associationSnapshot.val();
+                const associationName = associationData?.name || associationData?.associationName || 'Association';
+                
+                if (driversAssociationNameEl) {
+                    driversAssociationNameEl.textContent = associationName;
+                }
+            }
+        } catch (error) {
+            console.error('Error getting association ID:', error);
+        }
+    }
+
+    async function loadDriversDashboardData() {
+        try {
+            showDriversLoadingState();
+            
+            // Load drivers and calculate stats
+            const driversData = await fetchAllDrivers();
+            driversList = driversData.drivers;
+            
+            // Calculate and update statistics
+            const stats = calculateDriversStats(driversData);
+            updateDriversStats(stats);
+            
+            // Render drivers list
+            renderDriversList(driversList);
+            
+        } catch (error) {
+            console.error('Error loading drivers dashboard data:', error);
+            showDriversErrorState('Failed to load drivers data. Please try refreshing.');
+        }
+    }
+
+    async function fetchAllDrivers() {
+        if (!currentUserAssociationId || !db) {
+            throw new Error('Association ID not available');
+        }
+
+        try {
+            // Fetch all drivers from the drivers collection
+            const driversSnapshot = await db.ref('drivers').once('value');
+            const allDrivers = driversSnapshot.val() || {};
+            
+            // Filter drivers by association (if applicable)
+            const associationDrivers = {};
+            const driversWithVehicleInfo = [];
+            
+            Object.entries(allDrivers).forEach(([driverId, driver]) => {
+                // Check if driver belongs to current association or is not association-specific
+                if (!driver.associationId || driver.associationId === currentUserAssociationId) {
+                    associationDrivers[driverId] = driver;
+                    
+                    // Get vehicle information for this driver
+                    driversWithVehicleInfo.push(getDriverVehicleInfo(driverId, driver));
+                }
+            });
+            
+            // Fetch vehicle details for drivers that have vehicles
+            const driversWithVehicles = await Promise.all(driversWithVehicleInfo);
+            
+            return {
+                drivers: associationDrivers,
+                driversWithVehicles: driversWithVehicles
+            };
+            
+        } catch (error) {
+            console.error('Error fetching drivers:', error);
+            throw error;
+        }
+    }
+
+    async function getDriverVehicleInfo(driverId, driver) {
+        try {
+            // Check if driver has a vehicle assigned
+            if (driver.vehicleId) {
+                const vehicleSnapshot = await db.ref(`vehicles/${driver.vehicleId}`).once('value');
+                const vehicle = vehicleSnapshot.val();
+                
+                if (vehicle && vehicle.ownerId) {
+                    // Get owner information
+                    const ownerSnapshot = await db.ref(`users/${vehicle.ownerId}`).once('value');
+                    const owner = ownerSnapshot.val();
+                    
+                    return {
+                        driverId,
+                        driver,
+                        vehicle,
+                        owner: owner ? { name: owner.name, email: owner.email } : null,
+                        registrationNumber: vehicle.registrationNumber || 'N/A'
+                    };
+                }
+            }
+            
+            return {
+                driverId,
+                driver,
+                vehicle: null,
+                owner: null,
+                registrationNumber: 'N/A'
+            };
+            
+        } catch (error) {
+            console.error(`Error getting vehicle info for driver ${driverId}:`, error);
+            return {
+                driverId,
+                driver,
+                vehicle: null,
+                owner: null,
+                registrationNumber: 'N/A'
+            };
+        }
+    }
+
+    function calculateDriversStats(driversData) {
+        const allDrivers = Object.values(driversData.drivers);
+        const driversWithVehicles = driversData.driversWithVehicles.filter(d => d.vehicle !== null);
+        
+        let activeCount = 0;
+        let inactiveCount = 0;
+        
+        allDrivers.forEach(driver => {
+            const status = driver.status || 'active';
+            if (status === 'active' || status === 'online') {
+                activeCount++;
+            } else {
+                inactiveCount++;
+            }
+        });
+        
+        return {
+            total: allDrivers.length,
+            active: activeCount,
+            inactive: inactiveCount,
+            withVehicles: driversWithVehicles.length,
+            lastUpdated: new Date().toLocaleString('en-ZA')
+        };
+    }
+
+    function updateDriversStats(stats) {
+        if (totalDriversCountEl) totalDriversCountEl.textContent = stats.total;
+        if (activeDriversCountEl) activeDriversCountEl.textContent = stats.active;
+        if (inactiveDriversCountEl) inactiveDriversCountEl.textContent = stats.inactive;
+        if (driversWithVehiclesCountEl) driversWithVehiclesCountEl.textContent = stats.withVehicles;
+    }
+
+    function renderDriversList(drivers) {
+        const driversContentEl = document.getElementById('drivers-content');
+        
+        if (!driversContentEl) return;
+        
+        if (Object.keys(drivers).length === 0) {
+            driversContentEl.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-user-tie"></i>
+                    <h3>No Registered Drivers</h3>
+                    <p>No drivers have been registered in this association yet.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Sort drivers by name
+        const sortedDrivers = Object.entries(drivers)
+            .sort(([a, driverA], [b, driverB]) => (driverA.name || '').localeCompare(driverB.name || ''))
+            .map(([id, driver]) => ({ id, ...driver }));
+
+        driversContentEl.innerHTML = '';
+
+        sortedDrivers.forEach(driverObj => {
+            const driver = driverObj.driver || driverObj;
+            const vehicleInfo = driverObj.vehicle ? driverObj : null;
+            
+            const driverItem = document.createElement('div');
+            driverItem.className = 'list-item';
+            driverItem.style.cursor = 'default'; // Read-only
+            
+            const statusClass = getDriverStatusClass(driver.status || 'active');
+            const lastSeen = driver.lastSeen ? formatDate(driver.lastSeen) : 'Never';
+            const totalTrips = driver.totalTrips || 0;
+            
+            let vehicleSection = '';
+            if (vehicleInfo && vehicleInfo.vehicle) {
+                vehicleSection = `
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.1);">
+                        <p style="margin: 0 0 2px 0; font-weight: 600; color: var(--dark-blue);">
+                            <i class="fas fa-car"></i> Vehicle: ${vehicleInfo.registrationNumber}
+                        </p>
+                        <p style="margin: 0; font-size: 12px; color: #666;">
+                            <i class="fas fa-user"></i> Owner: ${vehicleInfo.owner?.name || 'N/A'}
+                        </p>
+                        <p style="margin: 2px 0 0 0; font-size: 11px; color: #888;">
+                            <i class="fas fa-envelope"></i> ${vehicleInfo.owner?.email || 'N/A'}
+                        </p>
+                    </div>
+                `;
+            }
+
+            driverItem.innerHTML = `
+                <div class="owner-info" style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <div class="status-indicator ${statusClass}" style="font-size: 11px; padding: 2px 6px;">
+                            ${getStatusText(driver.status || 'active')}
+                        </div>
+                        <h4 style="margin: 0; color: var(--dark-blue); font-weight: 600;">
+                            ${driver.name || 'Unnamed Driver'}
+                        </h4>
+                    </div>
+                    <p style="margin: 0 0 4px 0; font-size: 13px;">
+                        <i class="fas fa-envelope"></i> ${driver.email || 'N/A'}
+                    </p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px;">
+                        <i class="fas fa-phone"></i> ${driver.phone || 'N/A'}
+                    </p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px;">
+                        <i class="fas fa-id-card"></i> ID: ${driver.idNumber || 'N/A'}
+                    </p>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: #666;">
+                        <i class="fas fa-clock"></i> Last Seen: ${lastSeen} | 
+                        <i class="fas fa-road"></i> Trips: ${totalTrips}
+                    </p>
+                    ${vehicleSection}
+                </div>
+                <div style="text-align: right;">
+                    <span class="status-indicator ${statusClass}" style="font-size: 12px; padding: 4px 8px; margin-bottom: 4px; display: block;">
+                        ${getStatusText(driver.status || 'active')}
+                    </span>
+                </div>
+            `;
+            
+            driversContentEl.appendChild(driverItem);
+        });
+    }
+
+    function getDriverStatusClass(status) {
+        switch (status?.toLowerCase()) {
+            case 'online': return 'status-active';
+            case 'active': return 'status-active';
+            case 'offline': return 'status-inactive';
+            case 'inactive': return 'status-inactive';
+            case 'suspended': return 'status-warning';
+            default: return 'status-active';
+        }
+    }
+
+    function getStatusText(status) {
+        switch (status?.toLowerCase()) {
+            case 'online': return 'Online';
+            case 'active': return 'Active';
+            case 'offline': return 'Offline';
+            case 'inactive': return 'Inactive';
+            case 'suspended': return 'Suspended';
+            default: return 'Active';
+        }
+    }
+
+    function showDriversLoadingState() {
+        const driversContentEl = document.getElementById('drivers-content');
+        if (driversContentEl) {
+            driversContentEl.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading drivers...</p>
+                </div>
+            `;
+        }
+    }
+
+    function showDriversErrorState(message) {
+        const driversContentEl = document.getElementById('drivers-content');
+        if (driversContentEl) {
+            driversContentEl.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error Loading Drivers</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    }
+
+    function setupDriversEventListeners() {
+        // Refresh drivers button
+        if (refreshDriversBtn) {
+            refreshDriversBtn.addEventListener('click', async () => {
+                console.log('Refreshing drivers dashboard...');
+                await loadDriversDashboardData();
+                showNotification('Drivers dashboard refreshed successfully!', 'success');
+            });
+        }
+
+        // Real-time updates setup
+        setupRealTimeDriversUpdates();
+    }
+
+    function setupRealTimeDriversUpdates() {
+        if (!currentUserAssociationId || !db) return;
+
+        // Listen for changes in drivers collection
+        const driversRef = db.ref('drivers');
+        driversRef.on('child_added', (snapshot) => {
+            const driver = snapshot.val();
+            if (!driver.associationId || driver.associationId === currentUserAssociationId) {
+                console.log('New driver added:', driver.name);
+                loadDriversDashboardData(); // Refresh the entire list
+            }
+        });
+
+        driversRef.on('child_changed', (snapshot) => {
+            const driver = snapshot.val();
+            if (!driver.associationId || driver.associationId === currentUserAssociationId) {
+                console.log('Driver updated:', driver.name);
+                loadDriversDashboardData(); // Refresh the entire list
+            }
+        });
+
+        driversRef.on('child_removed', (snapshot) => {
+            console.log('Driver removed:', snapshot.key);
+            loadDriversDashboardData(); // Refresh the entire list
+        });
+
+        // Also listen for vehicle changes that might affect drivers
+        const vehiclesRef = db.ref('vehicles');
+        vehiclesRef.on('child_changed', async (snapshot) => {
+            const vehicle = snapshot.val();
+            if (vehicle.driverId) {
+                // Check if this affects any driver in our list
+                const driverSnapshot = await db.ref(`drivers/${vehicle.driverId}`).once('value');
+                const driver = driverSnapshot.val();
+                if (!driver.associationId || driver.associationId === currentUserAssociationId) {
+                    loadDriversDashboardData();
+                }
+            }
+        });
+
+        // Cleanup listener on page unload
+        window.addEventListener('beforeunload', () => {
+            if (driversRef) {
+                driversRef.off();
+            }
+            if (vehiclesRef) {
+                vehiclesRef.off();
+            }
+        });
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'Never';
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInHours = (now - date) / (1000 * 60 * 60);
+            
+            if (diffInHours < 1) {
+                return 'Just now';
+            } else if (diffInHours < 24) {
+                return `${Math.floor(diffInHours)}h ago`;
+            } else if (diffInHours < 168) {
+                return `${Math.floor(diffInHours / 24)}d ago`;
+            } else {
+                return date.toLocaleDateString('en-ZA');
+            }
+        } catch (error) {
+            return 'Invalid Date';
+        }
+    }
+
+    // Initialize drivers dashboard after user authentication
+    if (window.auth && window.auth.onAuthStateChanged) {
+        window.auth.onAuthStateChanged((user) => {
+            if (user && window.userId) {
+                // Small delay to ensure DOM is ready
+                setTimeout(() => {
+                    initializeDriversDashboard();
+                }, 1000);
+            }
+        });
+    } else {
+        // Fallback initialization
+        setTimeout(() => {
+            if (window.userId) {
+                initializeDriversDashboard();
+            }
+        }, 2000);
+    }
+
+    // Expose functions globally for debugging
+    window.refreshDriversDashboard = loadDriversDashboardData;
+    window.getDriverStats = () => calculateDriversStats({ drivers: driversList });
+});
 
                 document.addEventListener('DOMContentLoaded', () => {
                     // Owner approval dashboard elements
