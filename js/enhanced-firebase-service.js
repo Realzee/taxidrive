@@ -42,7 +42,73 @@ class EnhancedFirebaseService {
         }
     }
 
-    // Member approval methods
+    // Owner approval methods
+    async fetchPendingOwners() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can fetch pending owners');
+        }
+        try {
+            const snapshot = await this.database.ref('users').orderByChild('associationApproved').equalTo(false).once('value');
+            const users = snapshot.val() || {};
+            // Filter for users with role 'owner'
+            const pendingOwners = Object.fromEntries(
+                Object.entries(users).filter(([id, user]) => user.role === 'owner')
+            );
+            return pendingOwners;
+        } catch (error) {
+            console.error('Fetch pending owners error:', error);
+            throw error;
+        }
+    }
+
+    async fetchOwnerDocuments(ownerId) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can fetch owner documents');
+        }
+        try {
+            const snapshot = await this.database.ref(`documents/${ownerId}`).once('value');
+            return snapshot.val() || {};
+        } catch (error) {
+            console.error('Fetch owner documents error:', error);
+            throw error;
+        }
+    }
+
+    async updateOwnerApprovalStatus(ownerId, status, feedback = '') {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can update owner approval status');
+        }
+        if (!['approved', 'rejected', 'pending'].includes(status)) {
+            throw new Error('Invalid approval status');
+        }
+        try {
+            const updates = {
+                associationApproved: status === 'approved',
+                approvalStatus: status,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (feedback) {
+                updates.associationFeedback = feedback;
+            }
+
+            await this.database.ref(`users/${ownerId}`).update(updates);
+
+            // Log the approval action
+            await this.database.ref(`associations/${this.currentUser.uid}/approvalHistory/${ownerId}`).set({
+                action: status,
+                timestamp: new Date().toISOString(),
+                feedback: feedback,
+                ownerId: ownerId
+            });
+
+        } catch (error) {
+            console.error('Update owner approval status error:', error);
+            throw error;
+        }
+    }
+
+    // Member approval methods (keeping for backward compatibility)
     async fetchPendingMembers() {
         if (this.userRole !== 'association') {
             throw new Error('Unauthorized: Only associations can fetch pending members');
@@ -601,6 +667,70 @@ class EnhancedFirebaseService {
         }
     }
 
+    // Registered/Approved Owners Management Methods
+    async fetchApprovedOwners() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can fetch approved owners');
+        }
+        try {
+            const snapshot = await this.database.ref('users').orderByChild('associationApproved').equalTo(true).once('value');
+            const users = snapshot.val() || {};
+            // Filter for users with role 'owner'
+            const approvedOwners = Object.fromEntries(
+                Object.entries(users).filter(([id, user]) => user.role === 'owner')
+            );
+            return approvedOwners;
+        } catch (error) {
+            console.error('Fetch approved owners error:', error);
+            throw error;
+        }
+    }
+
+    async updateOwnerDetails(ownerId, updates) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can update owner details');
+        }
+        try {
+            const enhancedUpdates = {
+                ...updates,
+                updatedAt: new Date().toISOString()
+            };
+
+            await this.database.ref(`users/${ownerId}`).update(enhancedUpdates);
+
+            // Log the update action
+            await this.database.ref(`associations/${this.currentUser.uid}/ownerUpdates/${ownerId}`).set({
+                updates: updates,
+                timestamp: new Date().toISOString(),
+                ownerId: ownerId
+            });
+
+        } catch (error) {
+            console.error('Update owner details error:', error);
+            throw error;
+        }
+    }
+
+    async getAssociations() {
+        try {
+            const snapshot = await this.database.ref('users').orderByChild('role').equalTo('association').once('value');
+            const associations = snapshot.val() || {};
+            return Object.fromEntries(
+                Object.entries(associations).map(([id, association]) => [
+                    id,
+                    {
+                        id: id,
+                        name: association.name || 'Unnamed Association',
+                        email: association.email || 'N/A'
+                    }
+                ])
+            );
+        } catch (error) {
+            console.error('Get associations error:', error);
+            throw error;
+        }
+    }
+
     // Database Status and Information Methods
     async getDatabaseStatus() {
         try {
@@ -629,6 +759,259 @@ class EnhancedFirebaseService {
             return status;
         } catch (error) {
             console.error('Get database status error:', error);
+            throw error;
+        }
+    }
+
+    // Owner Registration Methods
+    async validateOwnerRegistration(ownerData) {
+        const errors = [];
+
+        // Required fields validation
+        if (!ownerData.name || ownerData.name.trim().length < 2) {
+            errors.push('Name must be at least 2 characters long');
+        }
+
+        if (!ownerData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerData.email)) {
+            errors.push('Valid email address is required');
+        }
+
+        if (!ownerData.phone || ownerData.phone.trim().length < 10) {
+            errors.push('Valid phone number is required');
+        }
+
+        if (!ownerData.idNumber || ownerData.idNumber.trim().length < 5) {
+            errors.push('Valid ID number is required');
+        }
+
+        if (!ownerData.address || ownerData.address.trim().length < 10) {
+            errors.push('Valid address is required');
+        }
+
+        // Check for duplicate email
+        try {
+            const usersSnapshot = await this.database.ref('users').orderByChild('email').equalTo(ownerData.email).once('value');
+            if (usersSnapshot.exists()) {
+                errors.push('An account with this email already exists');
+            }
+        } catch (error) {
+            console.error('Error checking for duplicate email:', error);
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    async registerNewOwner(ownerData) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can register new owners');
+        }
+
+        try {
+            // Validate owner data
+            const validation = await this.validateOwnerRegistration(ownerData);
+            if (!validation.isValid) {
+                throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+            }
+
+            // Generate secure password
+            const tempPassword = this.generateSecurePassword();
+
+            // Create Firebase Auth account
+            const userCredential = await this.auth.createUserWithEmailAndPassword(ownerData.email, tempPassword);
+
+            // Set up owner profile in database
+            const ownerProfile = {
+                uid: userCredential.user.uid,
+                name: ownerData.name.trim(),
+                email: ownerData.email.toLowerCase().trim(),
+                phone: ownerData.phone.trim(),
+                idNumber: ownerData.idNumber.trim(),
+                address: ownerData.address.trim(),
+                role: 'owner',
+                status: 'active',
+                associationId: this.currentUser.uid,
+                associationName: await this.getAssociationName(),
+                associationApproved: true,
+                approvalStatus: 'approved',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                registeredBy: this.currentUser.uid,
+                emailVerified: false,
+                loginEnabled: true
+            };
+
+            // Save to users collection
+            await this.database.ref(`users/${userCredential.user.uid}`).set(ownerProfile);
+
+            // Log registration activity
+            await this.database.ref(`associations/${this.currentUser.uid}/ownerRegistrations/${userCredential.user.uid}`).set({
+                ownerId: userCredential.user.uid,
+                ownerName: ownerData.name,
+                ownerEmail: ownerData.email,
+                timestamp: new Date().toISOString(),
+                tempPassword: tempPassword
+            });
+
+            return {
+                success: true,
+                ownerId: userCredential.user.uid,
+                tempPassword: tempPassword,
+                message: 'Owner registered successfully'
+            };
+
+        } catch (error) {
+            console.error('Register new owner error:', error);
+            throw error;
+        }
+    }
+
+    async sendOwnerCredentials(ownerEmail, tempPassword, ownerName) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can send credentials');
+        }
+
+        try {
+            // In a real application, you would use a proper email service
+            // For now, we'll simulate email sending and log the credentials
+            console.log('=== OWNER CREDENTIALS ===');
+            console.log(`Email: ${ownerEmail}`);
+            console.log(`Temporary Password: ${tempPassword}`);
+            console.log(`Name: ${ownerName}`);
+            console.log('======================');
+
+            // Store credentials for the association to access
+            await this.database.ref(`associations/${this.currentUser.uid}/pendingCredentials/${Date.now()}`).set({
+                ownerEmail: ownerEmail,
+                tempPassword: tempPassword,
+                ownerName: ownerName,
+                sentAt: new Date().toISOString(),
+                status: 'sent'
+            });
+
+            return {
+                success: true,
+                message: 'Credentials logged successfully. In production, these would be emailed to the owner.'
+            };
+
+        } catch (error) {
+            console.error('Send owner credentials error:', error);
+            throw error;
+        }
+    }
+
+    async setupOwnerProfile(ownerId, additionalData = {}) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can setup owner profiles');
+        }
+
+        try {
+            const profileData = {
+                ...additionalData,
+                updatedAt: new Date().toISOString(),
+                profileCompleted: true
+            };
+
+            await this.database.ref(`users/${ownerId}`).update(profileData);
+
+            return {
+                success: true,
+                message: 'Owner profile setup completed'
+            };
+
+        } catch (error) {
+            console.error('Setup owner profile error:', error);
+            throw error;
+        }
+    }
+
+    generateSecurePassword() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < 12; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return password;
+    }
+
+    async getAssociationName() {
+        try {
+            const snapshot = await this.database.ref(`users/${this.currentUser.uid}`).once('value');
+            const userData = snapshot.val();
+            return userData?.name || 'Unknown Association';
+        } catch (error) {
+            console.error('Error getting association name:', error);
+            return 'Unknown Association';
+        }
+    }
+
+    // Owner Registration Audit and Security Methods
+    async getOwnerRegistrationHistory(limit = 50) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can view registration history');
+        }
+
+        try {
+            const snapshot = await this.database.ref(`associations/${this.currentUser.uid}/ownerRegistrations`)
+                .orderByChild('timestamp')
+                .limitToLast(limit)
+                .once('value');
+
+            return snapshot.val() || {};
+        } catch (error) {
+            console.error('Get owner registration history error:', error);
+            throw error;
+        }
+    }
+
+    async getPendingCredentials() {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can view pending credentials');
+        }
+
+        try {
+            const snapshot = await this.database.ref(`associations/${this.currentUser.uid}/pendingCredentials`)
+                .orderByChild('sentAt')
+                .once('value');
+
+            return snapshot.val() || {};
+        } catch (error) {
+            console.error('Get pending credentials error:', error);
+            throw error;
+        }
+    }
+
+    async clearOldCredentials(daysOld = 30) {
+        if (this.userRole !== 'association') {
+            throw new Error('Unauthorized: Only associations can clear credentials');
+        }
+
+        try {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+            const snapshot = await this.database.ref(`associations/${this.currentUser.uid}/pendingCredentials`)
+                .orderByChild('sentAt')
+                .endAt(cutoffDate.toISOString())
+                .once('value');
+
+            const oldCredentials = snapshot.val() || {};
+            const deletePromises = Object.keys(oldCredentials).map(key =>
+                this.database.ref(`associations/${this.currentUser.uid}/pendingCredentials/${key}`).remove()
+            );
+
+            await Promise.all(deletePromises);
+
+            return {
+                success: true,
+                deletedCount: Object.keys(oldCredentials).length,
+                message: `Cleared ${Object.keys(oldCredentials).length} old credential records`
+            };
+
+        } catch (error) {
+            console.error('Clear old credentials error:', error);
             throw error;
         }
     }
