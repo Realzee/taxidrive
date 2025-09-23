@@ -6,43 +6,19 @@
     <title>Login - TaxiDrive</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --dark-blue: #1A2A44;
-            --light-blue: #A3C9E6;
-            --white: #FFFFFF;
-            --gray: #D3D3D3;
-            --danger: #F44336;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
-        body { background-color: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; }
-        .container { max-width: 480px; width: 90%; background-color: var(--white); padding: 30px; border-radius: 12px; box-shadow: 0 0 15px rgba(0, 0, 0, 0.1); text-align: center; }
-        .logo { margin-bottom: 20px; }
-        .logo img { height: 60px; }
-        h1 { font-size: 24px; font-weight: 700; color: var(--dark-blue); margin-bottom: 20px; }
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-label { display: block; font-size: 14px; font-weight: 500; color: var(--dark-blue); margin-bottom: 5px; }
-        .form-input { width: 100%; padding: 12px 15px; border: 1px solid var(--gray); border-radius: 8px; font-size: 16px; transition: border-color 0.2s; }
-        .form-input:focus { border-color: var(--dark-blue); outline: none; }
-        .btn { padding: 12px 15px; border-radius: 10px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background-color: var(--dark-blue); color: var(--white); transition: background-color 0.2s, transform 0.2s; }
-        .btn:hover { background-color: #15233a; transform: translateY(-2px); }
-        .error { color: var(--danger); font-size: 12px; margin-top: 10px; display: none; }
-        .role-select { margin-bottom: 20px; }
-        .role-select select { width: 100%; padding: 12px; border: 1px solid var(--gray); border-radius: 8px; font-size: 16px; appearance: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%231A2A44' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 12px center; background-color: var(--white); transition: border-color 0.2s; }
-        .role-select select:focus { border-color: var(--dark-blue); outline: none; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="logo">
-            <img src="Logo.png" alt="TaxiDrive Logo">
+            <img src="Logo1.png" alt="TaxiDrive Logo">
         </div>
         <h1>Login</h1>
 
         <!-- Toggle between Login and Signup -->
-        <div style="margin-bottom: 20px; display: flex; justify-content: center; gap: 10px;">
-            <button type="button" id="login-tab" class="btn" style="width: auto; background-color: var(--dark-blue);">Login</button>
-            <button type="button" id="signup-tab" class="btn" style="width: auto; background-color: var(--light-blue); color: var(--dark-blue);">Sign Up</button>
+        <div class="toggle-buttons">
+            <button type="button" id="login-tab" class="btn btn-primary active">Login</button>
+            <button type="button" id="signup-tab" class="btn btn-primary">Sign Up</button>
         </div>
 
         <!-- Login Form -->
@@ -65,43 +41,192 @@
                 <label class="form-label">Password</label>
                 <input type="password" class="form-input" id="login-password" required placeholder="Enter your password">
             </div>
-            <button type="submit" class="btn">Login</button>
+            <button type="submit" class="btn btn-primary">Login</button>
             <div id="login-error-message" class="error"></div>
         </form>
 
         <!-- Signup Form -->
         <form id="signup-form" style="display: none;">
-            <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input type="text" class="form-input" id="signup-name" required placeholder="Enter your full name">
+            <!-- Association Information Section -->
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: var(--dark-blue); margin-bottom: 15px; border-bottom: 2px solid var(--light-blue); padding-bottom: 5px;">
+                    <i class="fas fa-info-circle"></i> Association Information
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="association-name" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Association Name *</label>
+                        <input type="text" id="association-name" name="name" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter association name">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">This will be displayed throughout the system</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="association-email" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Email Address *</label>
+                        <input type="email" id="association-email" name="email" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter association email">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Used for notifications and communications</small>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="association-phone" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Phone Number *</label>
+                        <input type="tel" id="association-phone" name="phone" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter phone number">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Primary contact number</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="association-registration-number" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Registration Number</label>
+                        <input type="text" id="association-registration-number" name="registrationNumber"
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter registration number">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Official registration number (optional)</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="association-address" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Physical Address *</label>
+                    <textarea id="association-address" name="address" required rows="3"
+                              style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue); resize: vertical;"
+                              placeholder="Enter complete physical address"></textarea>
+                    <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Street address, city, province, postal code</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="association-description" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Description</label>
+                    <textarea id="association-description" name="description" rows="3"
+                              style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue); resize: vertical;"
+                              placeholder="Brief description of your association"></textarea>
+                    <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Tell us about your association's mission and services</small>
+                </div>
             </div>
-            <div class="form-group role-select">
-                <label class="form-label">Sign Up As</label>
-                <select id="signup-role" required>
-                    <option value="">Select Role</option>
-                    <option value="passenger">Passenger</option>
-                    <option value="driver">Driver</option>
-                    <option value="owner">Owner</option>
-                    <option value="association">Association</option>
-                </select>
+
+            <!-- Logo Upload Section -->
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: var(--dark-blue); margin-bottom: 15px; border-bottom: 2px solid var(--light-blue); padding-bottom: 5px;">
+                    <i class="fas fa-image"></i> Association Logo
+                </h4>
+
+                <div style="margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="association-logo" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Upload Logo</label>
+                        <input type="file" id="association-logo" name="logo" accept=".jpg,.jpeg,.png,.gif,.svg"
+                               style="width: 100%; padding: 12px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Accepted formats: JPG, PNG, GIF, SVG (Max 2MB)</small>
+                    </div>
+
+                    <div id="logo-preview-container" style="margin-top: 15px; display: none; text-align: center;">
+                        <div style="background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); border: 2px solid var(--glass-border); border-radius: 16px; padding: 20px; display: inline-block; box-shadow: var(--glass-shadow);">
+                            <img id="logo-preview-img" src="" alt="Logo Preview" style="max-width: 150px; max-height: 150px; border-radius: 12px; border: 2px solid var(--glass-border);">
+                            <div style="margin-top: 10px;">
+                                <button type="button" id="remove-logo-btn" class="btn btn-sm" style="background: var(--danger); color: var(--white); margin-right: 10px;">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                                <span id="logo-info" style="color: rgba(0, 0, 0, 0.8); font-size: 12px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-input" id="signup-email" required placeholder="Enter your email">
+
+            <!-- Administrator Information Section -->
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: var(--dark-blue); margin-bottom: 15px; border-bottom: 2px solid var(--light-blue); padding-bottom: 5px;">
+                    <i class="fas fa-user-shield"></i> Administrator Information
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="admin-name" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Administrator Name *</label>
+                        <input type="text" id="admin-name" name="adminName" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter administrator name">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Full name of the association administrator</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="admin-email" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Administrator Email *</label>
+                        <input type="email" id="admin-email" name="adminEmail" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter administrator email">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">This will be the login email for the administrator</small>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="admin-phone" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Administrator Phone *</label>
+                        <input type="tel" id="admin-phone" name="adminPhone" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter administrator phone">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Contact number for the administrator</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="admin-id-number" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 15px;">Administrator ID Number *</label>
+                        <input type="text" id="admin-id-number" name="adminIdNumber" required
+                               style="width: 100%; padding: 15px; border: 2px solid var(--glass-border); border-radius: 12px; font-size: 15px; transition: all 0.3s ease; background: var(--glass-bg); backdrop-filter: var(--glass-backdrop); -webkit-backdrop-filter: var(--glass-backdrop); color: var(--dark-blue);"
+                               placeholder="Enter administrator ID number">
+                        <small style="color: rgba(0, 0, 0, 0.7); font-size: 12px; margin-top: 5px; display: block;">Official ID number for verification</small>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-input" id="signup-password" required placeholder="Create a password" minlength="6">
+
+            <!-- Terms and Conditions -->
+            <div style="margin-bottom: 25px;">
+                <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                    <h5 style="color: var(--dark-blue); margin-bottom: 15px;">
+                        <i class="fas fa-clipboard-list"></i> Terms and Conditions
+                    </h5>
+                    <div style="max-height: 150px; overflow-y: auto; color: rgba(0, 0, 0, 0.9); font-size: 13px; line-height: 1.5; margin-bottom: 15px; padding-right: 10px;">
+                        <p>By registering this association, you agree to:</p>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Provide accurate and truthful information</li>
+                            <li>Comply with all applicable taxi industry regulations</li>
+                            <li>Maintain proper licensing and insurance requirements</li>
+                            <li>Ensure all member owners are properly registered and licensed</li>
+                            <li>Use the system responsibly and in accordance with the terms of service</li>
+                            <li>Protect user data and maintain confidentiality</li>
+                        </ul>
+                        <p>The administrator will receive login credentials and be responsible for managing the association's account and member owners.</p>
+                    </div>
+                    <label style="display: flex; align-items: flex-start; cursor: pointer; color: var(--dark-blue);">
+                        <input type="checkbox" id="terms-accepted" name="termsAccepted" required
+                               style="margin-right: 12px; margin-top: 3px; transform: scale(1.2);">
+                        <span style="font-size: 14px; line-height: 1.4;">
+                            I have read and agree to the terms and conditions. I confirm that all information provided is accurate and I have the authority to register this association.
+                        </span>
+                    </label>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Confirm Password</label>
-                <input type="password" class="form-input" id="confirm-password" required placeholder="Confirm your password">
+
+            <!-- Registration Progress -->
+            <div id="signup-progress" style="display: none; margin-bottom: 20px;">
+                <div style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; text-align: center;">
+                    <div style="background: rgba(255, 255, 255, 0.1); border-radius: 8px; height: 8px; margin-bottom: 15px; overflow: hidden;">
+                        <div id="signup-progress-bar" style="background: linear-gradient(135deg, var(--light-blue) 0%, var(--white) 100%); height: 100%; border-radius: 8px; width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--dark-blue);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 16px;"></i>
+                        <span id="signup-progress-text" style="font-size: 14px;">Preparing registration...</span>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn">Sign Up</button>
+
+            <button type="submit" class="btn btn-primary" id="submit-signup">
+                <i class="fas fa-building"></i> Register Association
+            </button>
             <div id="signup-error-message" class="error"></div>
         </form>
     </div>
 
+    <!-- Bottom Navigation -->
+   
     <!-- External Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" defer></script>
@@ -114,5 +239,80 @@
     <script src="js/enhanced-data-models.js" defer></script>
     <script src="js/index.js" defer></script>
     <script src="script.js" defer></script>
+
+    <!-- Error Handling and Debugging Script -->
+    <script>
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e.error);
+            console.error('Error occurred at:', e.filename, 'line:', e.lineno, 'column:', e.colno);
+            e.preventDefault();
+        });
+
+        // Unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled Promise Rejection:', e.reason);
+            e.preventDefault();
+        });
+
+        // Page load debugging
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded successfully at:', new Date().toLocaleString());
+
+            // Check if all elements are visible
+            const container = document.querySelector('.container');
+            const logo = document.querySelector('.logo img');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+
+            console.log('Container visibility:', getComputedStyle(container).display);
+            console.log('Logo visibility:', getComputedStyle(logo).display);
+            console.log('Login form visibility:', getComputedStyle(loginForm).display);
+            console.log('Signup form visibility:', getComputedStyle(signupForm).display);
+
+            // Check if logo image loads
+            if (logo) {
+                logo.addEventListener('error', function() {
+                    console.warn('Logo image failed to load, using fallback');
+                    this.style.display = 'none';
+                });
+
+                logo.addEventListener('load', function() {
+                    console.log('Logo image loaded successfully');
+                });
+            }
+
+            // Test form toggle functionality
+            const loginTab = document.getElementById('login-tab');
+            const signupTab = document.getElementById('signup-tab');
+
+            if (loginTab && signupTab) {
+                console.log('Form toggle buttons found');
+            } else {
+                console.error('Form toggle buttons not found');
+            }
+
+            // Check Firebase scripts
+            if (typeof firebase !== 'undefined') {
+                console.log('Firebase loaded successfully');
+            } else {
+                console.warn('Firebase not loaded yet, waiting for scripts...');
+            }
+        });
+
+        // Add visibility debugging for forms
+        function debugFormVisibility() {
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+
+            if (loginForm && signupForm) {
+                console.log('Login form display:', loginForm.style.display);
+                console.log('Signup form display:', signupForm.style.display);
+            }
+        }
+
+        // Make debug function global
+        window.debugFormVisibility = debugFormVisibility;
+    </script>
 </body>
 </html>
