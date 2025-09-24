@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["https://realzee.github.io"],
+    "method": ["GET", "POST", "PUT", "HEAD"],
+    "maxAgeSeconds": 3600
+  }
+]
