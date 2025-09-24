@@ -70,6 +70,26 @@ class FirebaseService {
         return snapshot.val();
     }
 
+    // --- Listen for owner-drivers changes ---
+    onOwnerDriversChange(callback) {
+        const ownersRef = this.database.ref('owners');
+        ownersRef.on('value', snapshot => {
+            const ownersData = snapshot.val() || {};
+            const allDrivers = [];
+
+            Object.values(ownersData).forEach(owner => {
+                if (owner.drivers) {
+                    Object.values(owner.drivers).forEach(driver => {
+                        allDrivers.push(driver);
+                    });
+                }
+            });
+
+            // Call the callback with all drivers
+            callback(allDrivers);
+        });
+    }
+
     // --- Storage ---
     async uploadFile(path, file) {
         const storageRef = this.storage.ref(path);
