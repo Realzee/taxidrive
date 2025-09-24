@@ -75,23 +75,47 @@ class FirebaseService {
     onOwnerDriversChange(callback) {
         const ownersRef = this.database.ref("owners");
         ownersRef.on("value", snapshot => {
-            const ownersData = snapshot.val() || {};
-            const allDrivers = [];
+            try {
+                const ownersData = snapshot.val() || {};
+                const allDrivers = [];
 
-            Object.values(ownersData).forEach(owner => {
-                if (owner.drivers) {
-                    Object.values(owner.drivers).forEach(driver => {
-                        allDrivers.push(driver);
-                    });
+                Object.values(ownersData).forEach(owner => {
+                    if (owner.drivers) {
+                        Object.values(owner.drivers).forEach(driver => {
+                            allDrivers.push(driver);
+                        });
+                    }
+                });
+
+                if (typeof callback === "function") {
+                    callback(allDrivers);
+                } else {
+                    console.warn("⚠️ onOwnerDriversChange called without a valid callback");
                 }
-            });
-
-            // ✅ Safe callback execution
-            if (typeof callback === "function") {
-                callback(allDrivers);
-            } else {
-                console.warn("onOwnerDriversChange called without a valid callback");
+            } catch (err) {
+                console.error("❌ Error processing owner drivers snapshot:", err);
             }
+        }, error => {
+            console.error("❌ Firebase listener error in onOwnerDriversChange:", error);
+        });
+    }
+
+    // --- Generic data listener ---
+    onDataChange(path, callback) {
+        const ref = this.database.ref(path);
+        ref.on("value", snapshot => {
+            try {
+                const data = snapshot.val();
+                if (typeof callback === "function") {
+                    callback(data);
+                } else {
+                    console.warn(`⚠️ onDataChange(${path}) called without valid callback`);
+                }
+            } catch (err) {
+                console.error(`❌ Error in onDataChange(${path}):`, err);
+            }
+        }, error => {
+            console.error(`❌ Firebase listener error on path ${path}:`, error);
         });
     }
 
