@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "associations": {
+      ".read": true,
+      ".write": "auth != null"   
+    },
+    "drivers": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "owners": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "passengers": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    ".read": false,
+    ".write": false
+  }
+}
