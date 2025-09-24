@@ -319,7 +319,7 @@
             const container = document.querySelector('.container');
             const logo = document.querySelector('.logo img');
             const loginForm = document.getElementById('login-form');
-            const signupForm = document.getElementById('signup-form');
+            // const signupForm = document.getElementById('signup-form');
 
             console.log('Container visibility:', getComputedStyle(container).display);
             console.log('Logo visibility:', getComputedStyle(logo).display);
@@ -369,11 +369,11 @@ if (signupForm) {
         // Add visibility debugging for forms
         function debugFormVisibility() {
             const loginForm = document.getElementById('login-form');
-            const signupForm = document.getElementById('signup-form');
+            // const signupForm = document.getElementById('signup-form');
 
-            if (loginForm && signupForm) {
+            if (loginForm) {
                 console.log('Login form display:', loginForm.style.display);
-                console.log('Signup form display:', signupForm.style.display);
+               // console.log('Signup form display:', signupForm.style.display);
             }
         }
 
