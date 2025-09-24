@@ -319,7 +319,7 @@
             const container = document.querySelector('.container');
             const logo = document.querySelector('.logo img');
             const loginForm = document.getElementById('login-form');
-            // const signupForm = document.getElementById('signup-form');
+            const signupAssociationForm = document.getElementById('signup-association');
 
             console.log('Container visibility:', getComputedStyle(container).display);
             console.log('Logo visibility:', getComputedStyle(logo).display);
@@ -329,8 +329,8 @@
     console.warn('Login form element not found');
 }
 
-if (signupForm) {
-    console.log('Signup form visibility:', getComputedStyle(signupForm).display);
+if (signupAssociationForm) {
+    console.log('Signup form visibility:', getComputedStyle(signupAssociationForm).display);
 } else {
     console.warn('Signup form element not found');
 }
@@ -369,11 +369,11 @@ if (signupForm) {
         // Add visibility debugging for forms
         function debugFormVisibility() {
             const loginForm = document.getElementById('login-form');
-            // const signupForm = document.getElementById('signup-form');
+            const signupAssociationForm = document.getElementById('signup-form');
 
             if (loginForm) {
                 console.log('Login form display:', loginForm.style.display);
-               // console.log('Signup form display:', signupForm.style.display);
+               console.log('Signup form display:', signupAssociationForm.style.display);
             }
         }
 
