@@ -3,116 +3,148 @@
  * Main JavaScript file for web-based functionality
  */
 
-document.addEventListener("DOMContentLoaded", onPageReady, false);
+document.addEventListener('DOMContentLoaded', onPageReady, false);
 
 function onPageReady() {
-    console.log("TaxiDrive web application loaded successfully at:", new Date().toLocaleString());
-
-    // Initialize app
+    console.log('TaxiDrive web application loaded successfully at:', new Date().toLocaleString());
     initApp();
 }
 
 function initApp() {
-    // ================================
-    // Variables
-    // ================================
     let walletBalance = 0;
     let isLoggedIn = false;
     let userId = null;
 
-    // Firebase references
     const auth = firebase.auth();
-    const db = firebase.database();
-    const storage = firebase.storage();
 
-    // ================================
-    // Helpers
-    // ================================
-    function isValidDataURL(str) {
-        return str && str.startsWith("data:image/") && str.includes("base64,");
+    // ============================
+    // AUTH STATE LISTENER
+    // ============================
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            isLoggedIn = true;
+            userId = user.uid;
+            console.log("✅ Logged in as:", userId);
+
+            // Save/update user profile
+            firebaseService.saveData(`users/${userId}`, {
+                email: user.email,
+                lastLogin: new Date().toISOString()
+            }).catch(err => console.error("❌ Failed to save user:", err));
+
+            // Start driver expiry notifications
+            checkDriverExpiryNotifications(userId);
+        } else {
+            console.log("⚠️ No user logged in");
+            isLoggedIn = false;
+            userId = null;
+        }
+    });
+
+    // ============================
+    // SIGNUP HANDLERS
+    // ============================
+    const signupAssociationForm = document.getElementById("signup-association");
+    if (signupAssociationForm) {
+        signupAssociationForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = e.target["email"].value;
+            const password = e.target["password"].value;
+
+            try {
+                const cred = await firebaseService.signUp(email, password);
+                const uid = cred.user.uid;
+                console.log("✅ Association signed up:", uid);
+
+                await firebaseService.saveData(`users/${uid}`, {
+                    email,
+                    role: "association",
+                    createdAt: new Date().toISOString()
+                });
+
+                alert("Association account created successfully!");
+                e.target.reset();
+                document.getElementById("signup-modal").style.display = "none";
+            } catch (err) {
+                console.error("❌ Signup error:", err);
+                alert("Signup failed: " + err.message);
+            }
+        });
     }
 
-    // ================================
-    // Driver Licence + PrDP Expiry Notifications
-    // ================================
-    function checkDriverExpiryNotifications() {
-        if (!userId) return;
+    // ============================
+    // LOGIN HANDLER
+    // ============================
+    const loginForm = document.getElementById("login-form");
+    if (loginForm) {
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const email = e.target["email"].value;
+            const password = e.target["password"].value;
 
+            try {
+                const cred = await firebaseService.signIn(email, password);
+                const uid = cred.user.uid;
+                console.log("✅ Logged in as:", uid);
+
+                alert("Login successful!");
+                loginForm.reset();
+            } catch (err) {
+                console.error("❌ Login error:", err);
+                alert("Login failed: " + err.message);
+            }
+        });
+    }
+
+    // ============================
+    // DRIVER EXPIRY NOTIFICATIONS
+    // ============================
+    function checkDriverExpiryNotifications(ownerId) {
+        if (!ownerId) return;
         const now = new Date();
-        const expiryThreshold = new Date(
-            now.getTime() + 60 * 24 * 60 * 60 * 1000
-        ); // 60 days from now
+        const expiryThreshold = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
-        // ✅ Use updated firebaseService listener
         firebaseService.onOwnerDriversChange((drivers) => {
-            const driverList = drivers || [];
-
-            driverList.forEach((driver) => {
+            drivers = drivers || [];
+            drivers.forEach(driver => {
                 if (driver.licenceExpiry) {
                     const licenceExpiryDate = new Date(driver.licenceExpiry);
                     if (licenceExpiryDate <= expiryThreshold) {
-                        alert(
-                            `⚠️ Driver ${driver.name} ${driver.surname}'s licence expires soon on ${driver.licenceExpiry}`
-                        );
+                        alert(`⚠️ Driver ${driver.name} ${driver.surname}'s licence expires on ${driver.licenceExpiry}`);
                     }
                 }
                 if (driver.prdpExpiry) {
                     const prdpExpiryDate = new Date(driver.prdpExpiry);
                     if (prdpExpiryDate <= expiryThreshold) {
-                        alert(
-                            `⚠️ Driver ${driver.name} ${driver.surname}'s PrDP expires soon on ${driver.prdpExpiry}`
-                        );
+                        alert(`⚠️ Driver ${driver.name} ${driver.surname}'s PrDP expires on ${driver.prdpExpiry}`);
                     }
                 }
             });
         });
     }
 
-    // ================================
-    // Firebase Auth State
-    // ================================
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            isLoggedIn = true;
-            userId = user.uid;
-            console.log("✅ User logged in:", user.email);
-
-            // Run expiry check after login
-            checkDriverExpiryNotifications();
-
-            // TODO: other initialization (dashboard, wallet, etc.)
-        } else {
-            isLoggedIn = false;
-            userId = null;
-            console.log("ℹ️ User logged out");
-        }
-    });
-
-    // ================================
-    // Role Selection + Signup Modals
-    // ================================
+    // ============================
+    // ROLE SELECTION MODAL
+    // ============================
     const signupBtn = document.getElementById("signup-tab");
     const signupRoleModal = document.getElementById("signup-role-modal");
     const roleButtons = document.querySelectorAll(".signup-role-btn");
     const roleCancelBtn = document.getElementById("signup-role-cancel");
 
-    // Open role selection modal
     if (signupBtn) {
         signupBtn.addEventListener("click", () => {
             if (signupRoleModal) signupRoleModal.style.display = "flex";
         });
     }
 
-    // Cancel role selection
     if (roleCancelBtn) {
         roleCancelBtn.addEventListener("click", () => {
             signupRoleModal.style.display = "none";
         });
     }
 
-    // Show appropriate signup modal based on role
     if (roleButtons) {
-        roleButtons.forEach((btn) => {
+        roleButtons.forEach(btn => {
             btn.addEventListener("click", () => {
                 const role = btn.dataset.role;
                 signupRoleModal.style.display = "none";
@@ -122,17 +154,13 @@ function initApp() {
                         document.getElementById("signup-modal").style.display = "flex";
                         break;
                     case "driver":
-                        document.getElementById("signup-driver-modal").style.display =
-                            "flex";
+                        document.getElementById("signup-driver-modal").style.display = "flex";
                         break;
                     case "owner":
-                        document.getElementById("signup-owner-modal").style.display =
-                            "flex";
+                        document.getElementById("signup-owner-modal").style.display = "flex";
                         break;
                     case "passenger":
-                        document.getElementById(
-                            "signup-passenger-modal"
-                        ).style.display = "flex";
+                        document.getElementById("signup-passenger-modal").style.display = "flex";
                         break;
                 }
             });
