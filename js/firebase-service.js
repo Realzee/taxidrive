@@ -24,6 +24,7 @@ class FirebaseService {
         this.init();
     }
 
+    // --- Initialize Firebase ---
     init() {
         try {
             if (!firebase.apps.length) {
@@ -72,8 +73,8 @@ class FirebaseService {
 
     // --- Listen for owner-drivers changes ---
     onOwnerDriversChange(callback) {
-        const ownersRef = this.database.ref('owners');
-        ownersRef.on('value', snapshot => {
+        const ownersRef = this.database.ref("owners");
+        ownersRef.on("value", snapshot => {
             const ownersData = snapshot.val() || {};
             const allDrivers = [];
 
@@ -85,8 +86,12 @@ class FirebaseService {
                 }
             });
 
-            // Call the callback with all drivers
-            callback(allDrivers);
+            // ✅ Safe callback execution
+            if (typeof callback === "function") {
+                callback(allDrivers);
+            } else {
+                console.warn("onOwnerDriversChange called without a valid callback");
+            }
         });
     }
 
