@@ -92,6 +92,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         const logoInfo = document.getElementById('logo-info');
         let selectedLogoFile = null;
 
+        function showSignupModal(title, message, loginDetails = '') {
+    const modal = document.getElementById('signup-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalLogin = document.getElementById('modal-login-details');
+    const closeBtn = document.getElementById('modal-close-btn');
+
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modalLogin.textContent = loginDetails;
+    modal.style.display = 'flex';
+
+    closeBtn.onclick = () => {
+        modal.style.display = 'none';
+    };
+}
+
+
         // Logo upload handler
         logoInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -133,6 +151,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Signup form handler
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+        document.getElementById('signup-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const associationName = document.getElementById('association-name').value;
+    const associationEmail = document.getElementById('association-email').value;
+    const adminName = document.getElementById('admin-name').value;
+    const adminEmail = document.getElementById('admin-email').value;
+    const adminPassword = Math.random().toString(36).slice(-8); // Generate temp password
+
+    try {
+        // Sign up admin user
+        const user = await firebaseService.signUp(adminEmail, adminPassword, adminName, 'association');
+
+        // Store association details in DB
+        await firebaseService.database.ref(`associations/${user.uid}`).set({
+            name: associationName,
+            email: associationEmail,
+            adminUid: user.uid,
+            createdAt: new Date().toISOString()
+        });
+
+        // Show confirmation modal with login credentials
+        showSignupModal(
+            'Association Created!',
+            `The association "${associationName}" has been registered successfully.`,
+            `Admin Email: ${adminEmail}\nPassword: ${adminPassword}`
+        );
+
+        // Reset the form
+        document.getElementById('signup-form').reset();
+
+    } catch (error) {
+        console.error('Signup error:', error);
+        showSignupModal(
+            'Error',
+            'Failed to create association. Please try again.',
+            error.message
+        );
+    }
+});
+    
 
             // Get form data
             const associationName = document.getElementById('association-name').value.trim();
