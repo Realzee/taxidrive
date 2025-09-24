@@ -1,5 +1,5 @@
 // Firebase Service Module for TaxiDrive
-// Centralized Firebase configuration, authentication, storage, and database operations
+// Centralized Firebase configuration and real-time database operations
 
 class FirebaseService {
     constructor() {
@@ -36,109 +36,55 @@ class FirebaseService {
             this.database = firebase.database();
             this.storage = firebase.storage();
 
-            // Watch authentication state
-            this.auth.onAuthStateChanged((user) => {
-                this.currentUser = user || null;
-                if (user) {
-                    console.log("User logged in:", user.email);
-                } else {
-                    console.log("No user logged in");
-                }
-            });
-
-            console.log("Firebase Service initialized successfully");
+            console.log("✅ Firebase Service initialized");
         } catch (error) {
-            console.error("Firebase initialization error:", error);
+            console.error("❌ Firebase initialization error:", error);
             throw error;
         }
     }
 
-    // 🔹 AUTH METHODS
+    // --- Auth ---
+    async signUp(email, password) {
+        return await this.auth.createUserWithEmailAndPassword(email, password);
+    }
+
     async signIn(email, password) {
-        try {
-            const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
-            this.currentUser = userCredential.user;
-            return userCredential.user;
-        } catch (error) {
-            console.error("Sign-in error:", error);
-            throw error;
-        }
+        return await this.auth.signInWithEmailAndPassword(email, password);
     }
 
-    async signOutUser() {
-        try {
-            await this.auth.signOut();
-            this.currentUser = null;
-            console.log("User signed out successfully");
-        } catch (error) {
-            console.error("Sign-out error:", error);
-            throw error;
-        }
+    async signOut() {
+        return await this.auth.signOut();
     }
 
-    async registerUser(email, password, role = "Passenger") {
-        try {
-            const userCredential = await this.auth.createUserWithEmailAndPassword(email, password);
-            const uid = userCredential.user.uid;
-
-            // Save user role in DB
-            await this.database.ref("users/" + uid).set({
-                email,
-                role
-            });
-
-            return userCredential.user;
-        } catch (error) {
-            console.error("Registration error:", error);
-            throw error;
-        }
+    // --- Database ---
+    async saveData(path, data) {
+        return await this.database.ref(path).set(data);
     }
 
-    // 🔹 DATABASE METHODS
-    async writeData(path, data) {
-        try {
-            await this.database.ref(path).set(data);
-            console.log("Data written successfully:", path);
-        } catch (error) {
-            console.error("Database write error:", error);
-            throw error;
-        }
+    async pushData(path, data) {
+        return await this.database.ref(path).push(data);
     }
 
-    async readData(path) {
-        try {
-            const snapshot = await this.database.ref(path).once("value");
-            return snapshot.val();
-        } catch (error) {
-            console.error("Database read error:", error);
-            throw error;
-        }
+    async getData(path) {
+        const snapshot = await this.database.ref(path).once("value");
+        return snapshot.val();
     }
 
-    // 🔹 STORAGE METHODS
+    // --- Storage ---
     async uploadFile(path, file) {
-        try {
-            const storageRef = this.storage.ref(path);
-            const snapshot = await storageRef.put(file);
-            return await snapshot.ref.getDownloadURL();
-        } catch (error) {
-            console.error("File upload error:", error);
-            throw error;
-        }
+        const storageRef = this.storage.ref(path);
+        const snapshot = await storageRef.put(file);
+        return await snapshot.ref.getDownloadURL();
     }
 
     async deleteFile(path) {
-        try {
-            const storageRef = this.storage.ref(path);
-            await storageRef.delete();
-            console.log("File deleted:", path);
-        } catch (error) {
-            console.error("File delete error:", error);
-            throw error;
-        }
+        const storageRef = this.storage.ref(path);
+        await storageRef.delete();
     }
 }
 
-// Create singleton instance
+// Create singleton
 const firebaseService = new FirebaseService();
-export default firebaseService;
+
+// 👇 Attach to global window so index.js & inline scripts can use it
+window.firebaseService = firebaseService;

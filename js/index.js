@@ -1,27 +1,12 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * TaxiDrive Web Application
+ * Main JavaScript file for web-based functionality
  */
 
-document.addEventListener('deviceready', onDeviceReady, false);
+document.addEventListener('DOMContentLoaded', onPageReady, false);
 
-function onDeviceReady() {
-    console.log('Running cordova-' + cordova.platformId + '@' + cordova.version);
-    document.getElementById('deviceready').classList.add('ready');
+function onPageReady() {
+    console.log('TaxiDrive web application loaded successfully at:', new Date().toLocaleString());
 
     // Initialize Firebase and app logic here
     initApp();
@@ -87,5 +72,48 @@ function initApp() {
         }
     });
 
-    // Other app initialization code can go here
+    // ================================
+    // Role Selection + Signup Modals
+    // ================================
+    const signupBtn = document.getElementById("signup-tab");
+    const signupRoleModal = document.getElementById("signup-role-modal"); // NEW modal
+    const roleButtons = document.querySelectorAll(".signup-role-btn"); // buttons inside role selection modal
+    const roleCancelBtn = document.getElementById("signup-role-cancel");
+
+    // Open role selection modal instead of directly showing signup
+    signupBtn.addEventListener("click", () => {
+        if (signupRoleModal) signupRoleModal.style.display = "flex";
+    });
+
+    // Cancel role selection
+    if (roleCancelBtn) {
+        roleCancelBtn.addEventListener("click", () => {
+            signupRoleModal.style.display = "none";
+        });
+    }
+
+    // Show the appropriate signup modal based on role
+    if (roleButtons) {
+        roleButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const role = btn.dataset.role;
+                signupRoleModal.style.display = "none";
+
+                switch (role) {
+                    case "association":
+                        document.getElementById("signup-modal").style.display = "flex";
+                        break;
+                    case "driver":
+                        document.getElementById("signup-driver-modal").style.display = "flex";
+                        break;
+                    case "owner":
+                        document.getElementById("signup-owner-modal").style.display = "flex";
+                        break;
+                    case "passenger":
+                        document.getElementById("signup-passenger-modal").style.display = "flex";
+                        break;
+                }
+            });
+        });
+    }
 }
