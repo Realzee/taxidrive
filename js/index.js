@@ -3,15 +3,14 @@
  * Main JavaScript file for web-based functionality
  */
 
-document.addEventListener('DOMContentLoaded', onPageReady, false);
+document.addEventListener("DOMContentLoaded", onPageReady, false);
 
 function onPageReady() {
-    console.log('TaxiDrive web application loaded successfully at:', new Date().toLocaleString());
+    console.log("✅ TaxiDrive web app loaded at:", new Date().toLocaleString());
     initApp();
 }
 
 function initApp() {
-    let walletBalance = 0;
     let isLoggedIn = false;
     let userId = null;
 
@@ -44,33 +43,10 @@ function initApp() {
     // ============================
     // SIGNUP HANDLERS
     // ============================
-    const signupAssociationForm = document.getElementById("signup-association");
-    if (signupAssociationForm) {
-        signupAssociationForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const email = e.target["email"].value;
-            const password = e.target["password"].value;
-
-            try {
-                const cred = await firebaseService.signUp(email, password);
-                const uid = cred.user.uid;
-                console.log("✅ Association signed up:", uid);
-
-                await firebaseService.saveData(`users/${uid}`, {
-                    email,
-                    role: "association",
-                    createdAt: new Date().toISOString()
-                });
-
-                alert("Association account created successfully!");
-                e.target.reset();
-                document.getElementById("signup-modal").style.display = "none";
-            } catch (err) {
-                console.error("❌ Signup error:", err);
-                alert("Signup failed: " + err.message);
-            }
-        });
-    }
+    attachSignupHandler("association");
+    attachSignupHandler("driver");
+    attachSignupHandler("owner");
+    attachSignupHandler("passenger");
 
     // ============================
     // LOGIN HANDLER
@@ -92,6 +68,38 @@ function initApp() {
             } catch (err) {
                 console.error("❌ Login error:", err);
                 alert("Login failed: " + err.message);
+            }
+        });
+    }
+
+    // ============================
+    // ROLE SELECTION MODAL
+    // ============================
+    const roleButtons = document.querySelectorAll(".role-btn");
+    const signupModal = document.getElementById("signup-modal");
+    const modalCloseBtn = document.getElementById("modal-close-btn");
+
+    if (roleButtons) {
+        roleButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const role = btn.dataset.role;
+                console.log(`🟢 Role selected: ${role}`);
+                openModal(role);
+                showSignupForm(role);
+            });
+        });
+    }
+
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener("click", () => {
+            closeModal();
+        });
+    }
+
+    if (signupModal) {
+        signupModal.addEventListener("click", (e) => {
+            if (e.target === signupModal) {
+                closeModal();
             }
         });
     }
@@ -122,48 +130,93 @@ function initApp() {
             });
         });
     }
+}
 
-    // ============================
-    // ROLE SELECTION MODAL
-    // ============================
-    const signupBtn = document.getElementById("signup-tab");
-    const signupRoleModal = document.getElementById("signup-role-modal");
-    const roleButtons = document.querySelectorAll(".signup-role-btn");
-    const roleCancelBtn = document.getElementById("signup-role-cancel");
+// ============================
+// SIGNUP HELPERS
+// ============================
+function attachSignupHandler(role) {
+    const form = document.getElementById(`signup-${role}`);
+    if (!form) return;
 
-    if (signupBtn) {
-        signupBtn.addEventListener("click", () => {
-            if (signupRoleModal) signupRoleModal.style.display = "flex";
-        });
-    }
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        console.log(`✍️ Signup form submitted for ${role}`);
 
-    if (roleCancelBtn) {
-        roleCancelBtn.addEventListener("click", () => {
-            signupRoleModal.style.display = "none";
-        });
-    }
+        const email = document.getElementById(`signup-${role}-email`).value;
+        const password = document.getElementById(`signup-${role}-password`).value;
+        const name = document.getElementById(`signup-${role}-name`).value;
 
-    if (roleButtons) {
-        roleButtons.forEach(btn => {
-            btn.addEventListener("click", () => {
-                const role = btn.dataset.role;
-                signupRoleModal.style.display = "none";
-
-                switch (role) {
-                    case "association":
-                        document.getElementById("signup-modal").style.display = "flex";
-                        break;
-                    case "driver":
-                        document.getElementById("signup-driver-modal").style.display = "flex";
-                        break;
-                    case "owner":
-                        document.getElementById("signup-owner-modal").style.display = "flex";
-                        break;
-                    case "passenger":
-                        document.getElementById("signup-passenger-modal").style.display = "flex";
-                        break;
-                }
+        try {
+            const userCredential = await firebaseService.signUp(email, password, {
+                role: role,
+                name: name
             });
-        });
+
+            console.log(`${role} created:`, userCredential.user.uid);
+
+            showSuccessModal(
+                `${capitalize(role)} created successfully`,
+                `Login Email: ${email}<br>Password: ${password}`
+            );
+
+            form.reset();
+        } catch (error) {
+            console.error("❌ Signup error:", error);
+            showErrorModal("Signup Failed", error.message);
+        }
+    });
+}
+
+function openModal(role) {
+    const titles = {
+        association: "Association Signup",
+        driver: "Driver Signup",
+        owner: "Owner Signup",
+        passenger: "Passenger Signup"
+    };
+
+    document.getElementById("modal-title").innerText = titles[role] || "Signup";
+    document.getElementById("modal-message").innerText = "Please fill in your details below.";
+    document.getElementById("modal-login-details").innerText = "";
+    document.getElementById("signup-modal").style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("signup-modal").style.display = "none";
+    hideAllSignupForms();
+}
+
+function showSuccessModal(message, loginDetails = "") {
+    document.getElementById("modal-title").innerText = "Success!";
+    document.getElementById("modal-message").innerText = message;
+    document.getElementById("modal-login-details").innerHTML = loginDetails;
+    document.getElementById("signup-modal").style.display = "flex";
+    hideAllSignupForms();
+}
+
+function showErrorModal(message, details = "") {
+    document.getElementById("modal-title").innerText = "Error!";
+    document.getElementById("modal-message").innerText = message;
+    document.getElementById("modal-login-details").innerText = details;
+    document.getElementById("signup-modal").style.display = "flex";
+}
+
+function showSignupForm(role) {
+    hideAllSignupForms();
+    const form = document.getElementById(`signup-${role}`);
+    if (form) {
+        form.style.display = "block";
     }
+}
+
+function hideAllSignupForms() {
+    const forms = document.querySelectorAll(".signup-form");
+    forms.forEach(form => {
+        form.style.display = "none";
+    });
+}
+
+function capitalize(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
 }
