@@ -1,263 +1,252 @@
-// Enhanced JavaScript functionality for TaxiDrive Login System
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        console.log('Initializing Firebase service...');
+javascript
+import { login, signupSimple, signupAssociation } from './js/supabase-service.js';
 
-        // --- FORM TOGGLE ---
-        const loginTab = document.getElementById('login-tab');
-        const signupTab = document.getElementById('signup-tab');
-        const loginForm = document.getElementById('login-form');
-        const signupAssociationForm = document.getElementById('signup-association');
+// Utility to close all modals
+function closeAllModals() {
+    const modals = [
+        'signup-role-modal',
+        'signup-passenger-modal',
+        'signup-driver-modal',
+        'signup-owner-modal',
+        'signup-association-modal',
+        'signup-modal'
+    ];
+    modals.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) modal.style.display = 'none';
+    });
+}
 
-        loginTab.addEventListener('click', () => {
-            loginForm.style.display = 'block';
-            signupAssociationForm.style.display = 'none';
-            loginTab.style.backgroundColor = 'var(--dark-blue)';
-            loginTab.style.color = 'var(--white)';
-            signupTab.style.backgroundColor = 'var(--light-blue)';
-            signupTab.style.color = 'var(--dark-blue)';
-            document.querySelector('h1').textContent = 'Login';
-        });
+// Utility to show a modal
+function showModal(modalId) {
+    closeAllModals();
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
+}
 
+// Utility to show error message
+function showError(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+}
+
+// Utility to show success message
+function showSuccess(message, loginDetails = '') {
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalLoginDetails = document.getElementById('modal-login-details');
+    if (modalTitle && modalMessage && modalLoginDetails) {
+        modalTitle.textContent = 'Success!';
+        modalMessage.textContent = message;
+        modalLoginDetails.textContent = loginDetails;
+        showModal('signup-modal');
+    }
+}
+
+// DOM Content Loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Toggle buttons
+    const loginTab = document.getElementById('login-tab');
+    const signupTab = document.getElementById('signup-tab');
+    const loginForm = document.getElementById('login-form');
+
+    if (signupTab) {
         signupTab.addEventListener('click', () => {
-            loginForm.style.display = 'none';
-            signupAssociationForm.style.display = 'block';
-            signupTab.style.backgroundColor = 'var(--dark-blue)';
-            signupTab.style.color = 'var(--white)';
-            loginTab.style.backgroundColor = 'var(--light-blue)';
-            loginTab.style.color = 'var(--dark-blue)';
-            document.querySelector('h1').textContent = 'Sign Up';
+            if (loginForm) loginForm.style.display = 'none';
+            showModal('signup-role-modal');
         });
+    }
 
-        // --- LOGIN FORM ---
+    if (loginTab) {
+        loginTab.addEventListener('click', () => {
+            if (loginForm) loginForm.style.display = 'block';
+            closeAllModals();
+        });
+    }
+
+    // Role selection buttons
+    const roleButtons = document.querySelectorAll('.signup-role-btn');
+    roleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const role = button.getAttribute('data-role');
+            const modalMap = {
+                'passenger': 'signup-passenger-modal',
+                'driver': 'signup-driver-modal',
+                'owner': 'signup-owner-modal',
+                'association': 'signup-association-modal'
+            };
+            if (modalMap[role]) {
+                showModal(modalMap[role]);
+            }
+        });
+    });
+
+    // Close buttons
+    const closeButtons = document.querySelectorAll('.modal-close-btn, #signup-role-cancel, #modal-close-btn');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const modalId = button.getAttribute('data-modal') || button.id === 'signup-role-cancel' ? 'signup-role-modal' : 'signup-modal';
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
+            if (loginForm) loginForm.style.display = 'block';
+        });
+    });
+
+    // Login form submission
+    if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            const role = document.getElementById('login-role').value;
-            const errorMessage = document.getElementById('login-error-message');
+            const email = document.getElementById('login-email')?.value;
+            const password = document.getElementById('login-password')?.value;
+            const role = document.getElementById('login-role')?.value;
 
-            if (!role) {
-                errorMessage.textContent = 'Please select a role.';
-                errorMessage.style.display = 'block';
+            if (!email || !password || !role) {
+                showError('login-error-message', 'Please fill in all fields');
                 return;
             }
 
             try {
-                const user = await firebaseService.signIn(email, password);
-                console.log('Login successful for', user.uid);
-
-                const userSnapshot = await firebase.database().ref(`users/${user.uid}`).once('value');
-                const userData = userSnapshot.val();
-
-                localStorage.setItem('userRole', role);
-                localStorage.setItem('userId', user.uid);
-                localStorage.setItem('userName', userData?.name || email);
-                localStorage.setItem('userEmail', email);
-
-                switch (role) {
-                    case 'passenger':
-                        window.location.href = 'Passenger.html';
-                        break;
-                    case 'driver':
-                        window.location.href = 'Driver.html';
-                        break;
-                    case 'owner':
-                        window.location.href = 'Owner.html';
-                        break;
-                    case 'association':
-                        window.location.href = 'Association.html';
-                        break;
-                }
+                await login(email, password, role);
+                window.location.href = '/dashboard.html'; // Adjust redirect as needed
             } catch (error) {
-                console.error('Login error:', error.message);
-                errorMessage.textContent = error.message;
-                errorMessage.style.display = 'block';
+                showError('login-error-message', error.message || 'Login failed');
             }
         });
+    }
 
-        // --- ROLE SELECTION MODAL ---
-        const signupRoleModal = document.getElementById('signup-role-modal');
-        const roleButtons = document.querySelectorAll('.signup-role-btn');
-        const roleCancel = document.getElementById('signup-role-cancel');
+    // Passenger signup
+    const passengerForm = document.getElementById('signup-passenger');
+    if (passengerForm) {
+        passengerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('passenger-email')?.value;
+            const password = document.getElementById('passenger-password')?.value;
 
-        if (signupRoleModal) {
-            signupTab.addEventListener('click', () => {
-                signupRoleModal.style.display = 'flex';
-            });
+            try {
+                await signupSimple('passenger', { email, password });
+                showSuccess('Passenger account created successfully');
+                passengerForm.reset();
+            } catch (error) {
+                showError('signup-passenger-error-message', error.message || 'Registration failed');
+            }
+        });
+    }
 
-            roleButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const role = btn.dataset.role;
-                    console.log('Selected role:', role);
-                    signupRoleModal.style.display = 'none';
-                    const roleInput = document.getElementById('signup-role');
-                    if (roleInput) roleInput.value = role;
-                });
-            });
+    // Driver signup
+    const driverForm = document.getElementById('signup-driver');
+    if (driverForm) {
+        driverForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('driver-email')?.value;
+            const password = document.getElementById('driver-password')?.value;
+            const licenseNumber = document.getElementById('driver-license-number')?.value;
 
-            if (roleCancel) {
-                roleCancel.addEventListener('click', () => {
-                    signupRoleModal.style.display = 'none';
-                });
+            try {
+                await signupSimple('driver', { email, password, license_number: licenseNumber });
+                showSuccess('Driver account created successfully');
+                driverForm.reset();
+            } catch (error) {
+                showError('signup-driver-error-message', error.message || 'Registration failed');
+            }
+        });
+    }
+
+    // Owner signup
+    const ownerForm = document.getElementById('signup-owner');
+    if (ownerForm) {
+        ownerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('owner-email')?.value;
+            const password = document.getElementById('owner-password')?.value;
+            const companyName = document.getElementById('owner-company-name')?.value;
+
+            try {
+                await signupSimple('owner', { email, password, company_name: companyName });
+                showSuccess('Owner account created successfully');
+                ownerForm.reset();
+            } catch (error) {
+                showError('signup-owner-error-message', error.message || 'Registration failed');
+            }
+        });
+    }
+
+    // Association signup
+    const associationForm = document.getElementById('signup-association');
+    if (associationForm) {
+        associationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                name: document.getElementById('association-name')?.value,
+                email: document.getElementById('association-email')?.value,
+                phone: document.getElementById('association-phone')?.value,
+                registrationNumber: document.getElementById('association-registration-number')?.value,
+                address: document.getElementById('association-address')?.value,
+                description: document.getElementById('association-description')?.value,
+                logo: document.getElementById('association-logo')?.files[0],
+                adminEmail: document.getElementById('admin-email')?.value,
+                adminPassword: document.getElementById('admin-password')?.value,
+                adminName: document.getElementById('admin-name')?.value,
+                adminPhone: document.getElementById('admin-phone')?.value,
+                adminIdNumber: document.getElementById('admin-id-number')?.value,
+                termsAccepted: document.getElementById('terms-accepted')?.checked
+            };
+
+            if (!formData.termsAccepted) {
+                showError('signup-association-error-message', 'You must accept the terms and conditions');
+                return;
             }
 
-            window.addEventListener('click', (e) => {
-                if (e.target === signupRoleModal) {
-                    signupRoleModal.style.display = 'none';
+            const progressBar = document.getElementById('signup-progress-bar');
+            const progressText = document.getElementById('signup-progress-text');
+            const progressDiv = document.getElementById('signup-progress');
+
+            if (progressBar && progressText && progressDiv) {
+                progressDiv.style.display = 'block';
+                progressText.textContent = 'Registering association...';
+                progressBar.style.width = '10%';
+            }
+
+            try {
+                await signupAssociation(formData);
+                if (progressBar && progressText) {
+                    progressBar.style.width = '100%';
+                    progressText.textContent = 'Registration complete!';
                 }
-            });
-        }
+                showSuccess('Association created successfully', `Login with: ${formData.adminEmail}`);
+                associationForm.reset();
+            } catch (error) {
+                showError('signup-association-error-message', error.message || 'Registration failed');
+                if (progressDiv) progressDiv.style.display = 'none';
+            }
+        });
+    }
 
-        // --- LOGO UPLOAD ---
-        const logoInput = document.getElementById('association-logo');
-        const logoPreviewContainer = document.getElementById('logo-preview-container');
-        const logoPreviewImg = document.getElementById('logo-preview-img');
-        const removeLogoBtn = document.getElementById('remove-logo-btn');
-        const logoInfo = document.getElementById('logo-info');
-        let selectedLogoFile = null;
+    // Logo preview for association form
+    const logoInput = document.getElementById('association-logo');
+    const logoPreviewContainer = document.getElementById('logo-preview-container');
+    const logoPreviewImg = document.getElementById('logo-preview-img');
+    const removeLogoBtn = document.getElementById('remove-logo-btn');
 
-        if (logoInput) {
-            logoInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml'];
-                if (!validTypes.includes(file.type)) {
-                    alert('Please select a valid image file (JPG, PNG, GIF, SVG)');
-                    return;
-                }
-
-                if (file.size > 2 * 1024 * 1024) {
-                    alert('File size must be less than 2MB');
-                    return;
-                }
-
-                selectedLogoFile = file;
+    if (logoInput && logoPreviewContainer && logoPreviewImg && removeLogoBtn) {
+        logoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     logoPreviewImg.src = e.target.result;
-                    logoPreviewImg.alt = file.name;
                     logoPreviewContainer.style.display = 'block';
-                    logoInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
                 };
                 reader.readAsDataURL(file);
-            });
+            }
+        });
 
-            removeLogoBtn.addEventListener('click', () => {
-                selectedLogoFile = null;
-                logoInput.value = '';
-                logoPreviewContainer.style.display = 'none';
-                logoPreviewImg.src = '';
-                logoInfo.textContent = '';
-            });
-        }
-
-        // --- SIGNUP FORM ---
-        if (signupAssociationForm) {
-            signupAssociationForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const associationName = document.getElementById('association-name').value.trim();
-                const associationEmail = document.getElementById('association-email').value.trim();
-                const associationPhone = document.getElementById('association-phone').value.trim();
-                const associationAddress = document.getElementById('association-address').value.trim();
-
-                const adminName = document.getElementById('admin-name').value.trim();
-                const adminEmail = document.getElementById('admin-email').value.trim();
-                const adminPhone = document.getElementById('admin-phone').value.trim();
-                const adminIdNumber = document.getElementById('admin-id-number').value.trim();
-
-                const termsAccepted = document.getElementById('terms-accepted').checked;
-                const errorMessage = document.getElementById('signup-error-message');
-                const progressContainer = document.getElementById('signup-progress');
-                const progressBar = document.getElementById('signup-progress-bar');
-                const progressText = document.getElementById('signup-progress-text');
-
-                if (!associationName || !associationEmail || !associationPhone || !associationAddress ||
-                    !adminName || !adminEmail || !adminPhone || !adminIdNumber) {
-                    errorMessage.textContent = 'Please fill in all required fields.';
-                    errorMessage.style.display = 'block';
-                    return;
-                }
-
-                if (!termsAccepted) {
-                    errorMessage.textContent = 'Please accept the terms and conditions.';
-                    errorMessage.style.display = 'block';
-                    return;
-                }
-
-                try {
-                    progressContainer.style.display = 'block';
-                    progressText.textContent = 'Creating association account...';
-                    progressBar.style.width = '25%';
-
-                    const associationData = {
-                        name: associationName,
-                        email: associationEmail,
-                        phone: associationPhone,
-                        address: associationAddress,
-                        adminName,
-                        adminEmail,
-                        adminPhone,
-                        adminIdNumber,
-                        termsAccepted,
-                        createdAt: new Date().toISOString(),
-                        status: 'pending'
-                    };
-
-                    // Upload logo
-                    if (selectedLogoFile) {
-                        const logoRef = firebase.storage().ref().child(`association-logos/${Date.now()}_${selectedLogoFile.name}`);
-                        const snapshot = await logoRef.put(selectedLogoFile);
-                        associationData.logoUrl = await snapshot.ref.getDownloadURL();
-                    }
-
-                    progressText.textContent = 'Saving association data...';
-                    progressBar.style.width = '75%';
-
-                    const associationsRef = firebase.database().ref('associations');
-                    const newAssociationRef = associationsRef.push();
-                    await newAssociationRef.set(associationData);
-
-                    const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
-                    const adminUser = await firebaseService.signUp(adminEmail, tempPassword, adminName, 'association_admin');
-
-                    await firebase.database().ref(`users/${adminUser.uid}`).update({
-                        associationId: newAssociationRef.key,
-                        role: 'association_admin'
-                    });
-
-                    progressText.textContent = 'Finalizing registration...';
-                    progressBar.style.width = '100%';
-
-                    localStorage.setItem('userRole', 'association');
-                    localStorage.setItem('userId', adminUser.uid);
-                    localStorage.setItem('userName', adminName);
-                    localStorage.setItem('userEmail', adminEmail);
-                    localStorage.setItem('associationId', newAssociationRef.key);
-
-                    setTimeout(() => {
-                        progressContainer.style.display = 'none';
-                        alert(`Association registered successfully!\n\nAdmin login credentials:\nEmail: ${adminEmail}\nTemporary Password: ${tempPassword}`);
-                        window.location.href = 'Association.html';
-                    }, 1000);
-
-                } catch (error) {
-                    console.error('Association registration error:', error);
-                    progressContainer.style.display = 'none';
-                    errorMessage.textContent = error.message || 'Registration failed. Please try again.';
-                    errorMessage.style.display = 'block';
-                }
-            });
-        }
-
-    } catch (error) {
-        console.error('Initialization error:', error);
-        const loginError = document.getElementById('login-error-message');
-        if (loginError) {
-            loginError.textContent = 'Failed to initialize app. Check console.';
-            loginError.style.display = 'block';
-        }
+        removeLogoBtn.addEventListener('click', () => {
+            logoInput.value = '';
+            logoPreviewContainer.style.display = 'none';
+            logoPreviewImg.src = '';
+        });
     }
 });
