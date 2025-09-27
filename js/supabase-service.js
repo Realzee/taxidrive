@@ -208,3 +208,4 @@ async function signupAssociation(formData) {
 
 // Export functions for use in other scripts
 export { login, signupSimple, signupAssociation };
+
