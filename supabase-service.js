@@ -1,10 +1,14 @@
 javascript
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+// Use a specific version of Supabase to ensure createClient is available
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/module/index.js';
+
+console.log('Attempting to initialize Supabase client...');
 
 // Initialize Supabase client
 const SUPABASE_URL = 'https://kgyiwowwdwxrxsuydwii.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtneWl3b3d3ZHd4cnhzdXlkd2lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODUyMzUsImV4cCI6MjA3NDQ2MTIzNX0.CYWfAs4xaBf7WwJthiBGHw4iBtiY1wwYvghHcXQnVEc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('Supabase client initialized successfully');
 
 // Helper: Show error message
 function showError(elementId, message) {
@@ -37,6 +41,7 @@ function showSuccess(message, loginDetails = '') {
 // Authentication: Login
 async function login(email, password, role) {
     try {
+        console.log('Attempting login:', { email, role });
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             showError('login-error-message', error.message || 'Login failed');
@@ -71,6 +76,7 @@ async function signupSimple(role, formData) {
     const errorElementId = `signup-${role}-error-message`;
 
     try {
+        console.log(`Attempting ${role} signup:`, { email });
         // Validate password length
         if (password.length < 8) {
             showError(errorElementId, 'Password must be at least 8 characters long');
@@ -118,6 +124,7 @@ async function signupAssociation(formData) {
     const errorElementId = 'signup-association-error-message';
 
     try {
+        console.log('Attempting association signup:', { adminEmail, name });
         // Validate password length
         if (adminPassword.length < 8) {
             showError(errorElementId, 'Administrator password must be at least 8 characters long');
@@ -125,6 +132,7 @@ async function signupAssociation(formData) {
         }
 
         // Sign up admin
+        console.log('Signing up admin...');
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: adminEmail,
             password: adminPassword
@@ -135,8 +143,10 @@ async function signupAssociation(formData) {
         }
 
         const adminId = authData.user.id;
+        console.log('Admin signed up, ID:', adminId);
 
         // Insert admin as user
+        console.log('Inserting admin user data...');
         const { error: userError } = await supabase.from('users').insert({
             id: adminId,
             email: adminEmail,
@@ -150,6 +160,7 @@ async function signupAssociation(formData) {
         // Upload logo if provided
         let logoUrl = null;
         if (logoFile) {
+            console.log('Uploading logo:', logoFile.name);
             const fileName = `${adminId}/${Date.now()}_${logoFile.name}`; // Unique file name
             const { data: storageData, error: storageError } = await supabase.storage
                 .from('logos')
@@ -160,9 +171,11 @@ async function signupAssociation(formData) {
             }
             const { data: publicUrlData } = supabase.storage.from('logos').getPublicUrl(fileName);
             logoUrl = publicUrlData.publicUrl;
+            console.log('Logo uploaded, URL:', logoUrl);
         }
 
         // Insert association data
+        console.log('Inserting association data...');
         const associationData = {
             name,
             email,
